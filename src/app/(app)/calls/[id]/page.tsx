@@ -5,6 +5,8 @@ import { prisma } from "@/lib/db";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { TranscriptEditor } from "@/components/calls/transcript-editor";
+import { AnalyzeCallButton } from "@/components/ai/analyze-call-button";
+import { FollowUpPanel } from "@/components/ai/follow-up-panel";
 
 export default async function CallDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -14,6 +16,12 @@ export default async function CallDetailPage({ params }: { params: Promise<{ id:
     include: { deal: { select: { id: true, name: true } }, transcript: true },
   });
   if (!call) notFound();
+
+  const insights = await prisma.aIInsight.findMany({
+    where: { callId: id, organizationId },
+    orderBy: { createdAt: "desc" },
+    take: 20,
+  });
 
   return (
     <div className="p-6 sm:p-8">
@@ -47,7 +55,23 @@ export default async function CallDetailPage({ params }: { params: Promise<{ id:
             <div className="flex justify-between"><dt className="text-zinc-500">Deal</dt><dd className="text-zinc-200">{call.deal ? <Link href={`/deals/${call.deal.id}`} className="text-sky-400 hover:underline">{call.deal.name}</Link> : "—"}</dd></div>
             <div className="flex justify-between"><dt className="text-zinc-500">Agendada</dt><dd className="text-zinc-200">{call.scheduledAt ? new Date(call.scheduledAt).toLocaleString("pt-BR") : "—"}</dd></div>
           </dl>
-          <p className="mt-4 text-xs text-zinc-500">Análise IA (insights, discovery auto-fill) chega na Phase 5. Este MVP armazena transcript manual.</p>
+          <div className="mt-4">
+            <AnalyzeCallButton callId={call.id} hasTranscript={!!call.transcript?.content?.trim()} />
+          </div>
+          {insights.length > 0 && (
+            <div className="mt-4 space-y-2">
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-400">Insights ({insights.length})</h3>
+              {insights.map((ins) => (
+                <div key={ins.id} className="rounded-md border border-zinc-800 bg-zinc-950 p-3">
+                  <div className="flex items-center gap-2"><span className="rounded bg-zinc-800 px-1.5 py-0.5 text-[11px] text-zinc-300">{ins.type}</span>{ins.confidence != null && <span className="text-[11px] text-zinc-500">{Math.round(ins.confidence * 100)}%</span>}</div>
+                  <div className="mt-1 text-sm font-medium text-zinc-100">{ins.title}</div>
+                  {ins.evidence && <div className="mt-1 text-xs italic text-zinc-400">“{ins.evidence}”</div>}
+                  {ins.whyItMatters && <div className="mt-1 text-xs text-zinc-500">{ins.whyItMatters}</div>}
+                  {ins.recommendedAction && <div className="mt-1 text-xs text-sky-300">→ {ins.recommendedAction}</div>}
+                </div>
+              ))}
+            </div>
+          )}
         </section>
 
         <section className="rounded-xl border border-zinc-800 bg-zinc-900 p-4">
@@ -57,6 +81,10 @@ export default async function CallDetailPage({ params }: { params: Promise<{ id:
             <TranscriptEditor callId={call.id} initial={{ content: call.transcript?.content ?? null, language: call.transcript?.language ?? null }} />
           </div>
         </section>
+      </div>
+
+      <div className="mt-6">
+        <FollowUpPanel callId={call.id} dealId={call.dealId} />
       </div>
     </div>
   );

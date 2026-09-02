@@ -4,6 +4,7 @@ import { requireTenant } from "@/lib/tenant";
 import { prisma } from "@/lib/db";
 import { getDiscoveryWithHealth, healthColor, healthBarColor } from "@/lib/discovery";
 import { DiscoveryPanel } from "@/components/discovery/discovery-panel";
+import { PreCallPanel } from "@/components/ai/pre-call-panel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
@@ -86,6 +87,10 @@ export default async function DealDetailPage({ params }: { params: Promise<{ id:
 
       <div className="mt-6">
         <DiscoveryPanel dealId={deal.id} initialFields={discoveryFields as never} initialHealth={health} />
+      </div>
+
+      <div className="mt-6">
+        <PreCallPanel dealId={deal.id} />
       </div>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
