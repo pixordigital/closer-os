@@ -46,7 +46,7 @@ export async function setSessionCookie(payload: SessionPayload) {
   const jar = await cookies();
   jar.set(COOKIE, token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure: process.env.NODE_ENV === "production" && (process.env.APP_URL?.startsWith("https://") ?? false),
     sameSite: "lax",
     maxAge: MAX_AGE,
     path: "/",
