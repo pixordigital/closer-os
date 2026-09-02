@@ -10,6 +10,9 @@ services:
       dockerfile: Dockerfile
     restart: unless-stopped
     environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - HOSTNAME=0.0.0.0
       - DATABASE_URL=postgresql://closer:${DB_PASSWORD}@db:5432/closer_os?schema=public
       - AUTH_SECRET=${AUTH_SECRET}
       - APP_URL=http://178.105.181.38:6002

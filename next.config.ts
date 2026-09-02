@@ -2,7 +2,6 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   output: "standalone",
   reactStrictMode: true,
-  turbopack: { root: "/root/ai_projects/claude_projects/closer_os" },
   async headers() {
     // ponytail: CSP loose for Next 16 RSC inline styles/scripts; tighten with nonce when needed
     const csp = [
