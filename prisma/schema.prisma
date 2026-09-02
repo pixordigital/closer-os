@@ -1,0 +1,752 @@
+// Closer OS — Prisma Schema v1.0
+// Covers Phase 1 foundation + forward-compatible stubs for all §23 entities
+// DB: PostgreSQL | ORM: Prisma | pgvector: prepared (§8), enable when needed
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ── Enums ──────────────────────────────────────────────────────────
+
+enum Role {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+enum DecisionRole {
+  DECISION_MAKER
+  INFLUENCER
+  CHAMPION
+  USER
+  BLOCKER
+  UNKNOWN
+}
+
+enum DealStage {
+  LEAD
+  QUALIFIED
+  DISCOVERY
+  SOLUTION
+  PROPOSAL
+  NEGOTIATION
+  VERBAL_COMMITMENT
+  WON
+  LOST
+}
+
+enum CallStatus {
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+}
+
+enum AnalysisStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+enum DiscoveryFieldStatus {
+  UNKNOWN
+  PARTIAL
+  CONFIRMED
+}
+
+enum DiscoveryFieldSource {
+  TRANSCRIPT
+  USER
+  CRM
+  AI_INFERENCE
+  EXTERNAL_RESEARCH
+}
+
+enum JobStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  DONE
+  CANCELLED
+}
+
+enum FollowUpType {
+  EMAIL
+  WHATSAPP
+  LINKEDIN
+  CRM_NOTE
+  INTERNAL_SUMMARY
+}
+
+enum FollowUpStatus {
+  DRAFT
+  PENDING_REVIEW
+  APPROVED
+  SENT
+  CANCELLED
+}
+
+enum ObjectionCategory {
+  PRICE
+  TIMING
+  AUTHORITY
+  TRUST
+  COMPETITION
+  STATUS_QUO
+  NEED
+  PRIORITY
+  IMPLEMENTATION
+  RISK
+  INTERNAL_APPROVAL
+}
+
+enum RoleplayDifficulty {
+  LEVEL_1
+  LEVEL_2
+  LEVEL_3
+  LEVEL_4
+  LEVEL_5
+  LEVEL_6
+  LEVEL_7
+  BOSS
+}
+
+enum RoleplaySessionStatus {
+  PENDING
+  ACTIVE
+  COMPLETED
+  ABANDONED
+}
+
+enum Speaker {
+  SELLER
+  PROSPECT
+  SYSTEM
+}
+
+enum ROIScenario {
+  CONSERVATIVE
+  BASE
+  OPTIMISTIC
+}
+
+// ── Auth / Multi-tenant (§10) ───────────────────────────────────
+
+model User {
+  id               String            @id @default(cuid())
+  email            String            @unique
+  name             String
+  passwordHash     String
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  memberships      Membership[]
+  sellerProfile    SellerProfile?
+  sellerSkills     SellerSkill[]
+  roleplaySessions RoleplaySession[]
+  trainingPlans    TrainingPlan[]
+  activities       Activity[]
+  auditLogs        AuditLog[]
+}
+
+model Organization {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  memberships       Membership[]
+  companies         Company[]
+  contacts          Contact[]
+  deals             Deal[]
+  calls             Call[]
+  objections        Objection[]
+  followUps         FollowUp[]
+  tasks             Task[]
+  roiModels         ROIModel[]
+  aiInsights        AIInsight[]
+  aiUsages          AIUsage[]
+  aiJobs            AIJob[]
+  roleplayScenarios RoleplayScenario[]
+  roleplaySessions  RoleplaySession[]
+  coachingSessions  CoachingSession[]
+  trainingPlans     TrainingPlan[]
+  activities        Activity[]
+  auditLogs         AuditLog[]
+
+  @@index([slug])
+}
+
+model Membership {
+  id             String   @id @default(cuid())
+  userId         String
+  organizationId String
+  role           Role     @default(MEMBER)
+  createdAt      DateTime @default(now())
+
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, organizationId])
+  @@index([organizationId])
+  @@index([userId])
+}
+
+// ── CRM Core (§24-27) ───────────────────────────────────────────
+
+model Company {
+  id             String   @id @default(cuid())
+  organizationId String
+  name           String
+  website        String?
+  industry       String?
+  companySize    String? // e.g. "1-10" "11-50" "51-200" "201-1000" "1000+"
+  revenueRange   String?
+  location       String?
+  description    String?  @db.Text
+  notes          String?  @db.Text
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  contacts     Contact[]
+  deals        Deal[]
+
+  @@index([organizationId])
+  @@index([name])
+}
+
+model Contact {
+  id             String       @id @default(cuid())
+  organizationId String
+  companyId      String
+  name           String
+  role           String?
+  email          String?
+  phone          String?
+  linkedinUrl    String?
+  decisionRole   DecisionRole @default(UNKNOWN)
+  notes          String?      @db.Text
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  company      Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  deals        Deal[]       @relation("PrimaryContact")
+
+  @@index([organizationId])
+  @@index([companyId])
+  @@index([email])
+}
+
+model Deal {
+  id                String    @id @default(cuid())
+  organizationId    String
+  companyId         String
+  primaryContactId  String?
+  name              String
+  stage             DealStage @default(LEAD)
+  value             Decimal?  @db.Decimal(14, 2)
+  currency          String    @default("BRL")
+  probability       Int? // 0-100
+  expectedCloseDate DateTime?
+  source            String?
+  currentSolution   String?   @db.Text
+  desiredOutcome    String?   @db.Text
+  painSummary       String?   @db.Text
+  urgency           String?
+  decisionProcess   String?   @db.Text
+  decisionCriteria  String?   @db.Text
+  nextStep          String?   @db.Text
+  nextStepDate      DateTime?
+  lostReason        String?   @db.Text
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  organization    Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  company         Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  primaryContact  Contact?         @relation("PrimaryContact", fields: [primaryContactId], references: [id])
+  calls           Call[]
+  discoveryFields DiscoveryField[]
+  objections      Objection[]
+  followUps       FollowUp[]
+  tasks           Task[]
+  roiModels       ROIModel[]
+  aiInsights      AIInsight[]
+
+  @@index([organizationId])
+  @@index([companyId])
+  @@index([stage])
+  @@index([expectedCloseDate])
+  @@index([createdAt])
+}
+
+// ── Discovery (§29-30) ───────────────────────────────────────────
+
+model DiscoveryField {
+  id         String               @id @default(cuid())
+  dealId     String
+  key        String // situation | problem | impact | cause | consequence | cost | urgency | desiredOutcome | decisionMaker | decisionProcess | decisionCriteria | budget | nextStep
+  status     DiscoveryFieldStatus @default(UNKNOWN)
+  value      String?              @db.Text
+  confidence Float? // 0-1
+  source     DiscoveryFieldSource @default(CRM)
+  createdAt  DateTime             @default(now())
+  updatedAt  DateTime             @updatedAt
+
+  deal Deal @relation(fields: [dealId], references: [id], onDelete: Cascade)
+
+  @@unique([dealId, key])
+  @@index([dealId])
+}
+
+// ── Calls & Transcripts (§32-35) ─────────────────────────────────
+
+model Call {
+  id             String         @id @default(cuid())
+  organizationId String
+  dealId         String?
+  contactId      String?
+  title          String
+  scheduledAt    DateTime?
+  duration       Int? // seconds
+  status         CallStatus     @default(SCHEDULED)
+  analysisStatus AnalysisStatus @default(PENDING)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  deal         Deal?        @relation(fields: [dealId], references: [id])
+  transcript   Transcript?
+  aiInsights   AIInsight[]
+  objections   Objection[]
+
+  @@index([organizationId])
+  @@index([dealId])
+  @@index([contactId])
+  @@index([createdAt])
+  @@index([analysisStatus])
+}
+
+model Transcript {
+  id              String   @id @default(cuid())
+  callId          String   @unique
+  content         String   @db.Text
+  language        String   @default("pt-BR")
+  speakerSegments Json? // [{speaker, text, start, end}]
+  createdAt       DateTime @default(now())
+
+  call Call @relation(fields: [callId], references: [id], onDelete: Cascade)
+
+  @@index([callId])
+}
+
+// ── Objections / FollowUp / Tasks / ROI ──────────────────────────
+
+model Objection {
+  id             String            @id @default(cuid())
+  organizationId String
+  dealId         String?
+  callId         String?
+  category       ObjectionCategory
+  content        String            @db.Text
+  handled        Boolean           @default(false)
+  createdAt      DateTime          @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  deal         Deal?        @relation(fields: [dealId], references: [id])
+  call         Call?        @relation(fields: [callId], references: [id])
+
+  @@index([organizationId])
+  @@index([dealId])
+}
+
+model FollowUp {
+  id             String         @id @default(cuid())
+  organizationId String
+  dealId         String
+  callId         String?
+  type           FollowUpType
+  subject        String?
+  content        String         @db.Text
+  status         FollowUpStatus @default(DRAFT)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  deal         Deal         @relation(fields: [dealId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([dealId])
+}
+
+model Task {
+  id             String     @id @default(cuid())
+  organizationId String
+  dealId         String?
+  assigneeId     String?
+  title          String
+  description    String?    @db.Text
+  dueDate        DateTime?
+  status         TaskStatus @default(TODO)
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  deal         Deal?        @relation(fields: [dealId], references: [id])
+
+  @@index([organizationId])
+  @@index([dealId])
+  @@index([status])
+}
+
+model ROIModel {
+  id             String      @id @default(cuid())
+  organizationId String
+  dealId         String
+  scenario       ROIScenario @default(BASE)
+  inputs         Json
+  outputs        Json // { monthlySavings, annualSavings, revenueUpside, totalAnnualImpact, roi, paybackPeriod }
+  assumptions    Json?
+  createdAt      DateTime    @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  deal         Deal         @relation(fields: [dealId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([dealId])
+}
+
+// ── AI / Coaching ────────────────────────────────────────────────
+
+model AIInsight {
+  id                String   @id @default(cuid())
+  organizationId    String
+  dealId            String?
+  callId            String?
+  type              String // missed_opportunity | discovery_gap | objection | coaching | risk | etc.
+  title             String
+  evidence          String?  @db.Text
+  confidence        Float? // 0-1
+  whyItMatters      String?  @db.Text
+  recommendedAction String?  @db.Text
+  metadata          Json?
+  createdAt         DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  deal         Deal?        @relation(fields: [dealId], references: [id])
+  call         Call?        @relation(fields: [callId], references: [id])
+
+  @@index([organizationId])
+  @@index([dealId])
+  @@index([type])
+}
+
+model AIRecommendation {
+  id             String   @id @default(cuid())
+  organizationId String
+  userId         String?
+  type           String // roleplay | training | coaching
+  title          String
+  reason         String?  @db.Text
+  payload        Json?
+  dismissed      Boolean  @default(false)
+  createdAt      DateTime @default(now())
+
+  @@index([organizationId])
+  @@index([userId])
+}
+
+model CoachingSession {
+  id             String    @id @default(cuid())
+  organizationId String
+  userId         String
+  periodStart    DateTime?
+  periodEnd      DateTime?
+  summary        String?   @db.Text
+  strengths      Json?
+  weaknesses     Json?
+  trends         Json?
+  createdAt      DateTime  @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([userId])
+}
+
+// ── Roleplay Engine (§47-64) ─────────────────────────────────────
+
+model RoleplayScenario {
+  id                String             @id @default(cuid())
+  organizationId    String? // null = global template
+  title             String
+  industry          String?
+  companySize       String?
+  ticket            String?
+  persona           String // CEO | CFO | CTO | etc.
+  difficulty        RoleplayDifficulty @default(LEVEL_1)
+  publicContext     String             @db.Text
+  hiddenContext     Json // §50 hidden: realProblem, monthlyImpact, budget, decisionMaker, etc.
+  painPoints        Json?
+  businessImpact    String?            @db.Text
+  urgency           String?
+  decisionMaker     String?
+  decisionProcess   String?            @db.Text
+  decisionCriteria  String?            @db.Text
+  budget            String?
+  currentSolution   String?
+  competitors       Json?
+  objections        Json? // string[]
+  successCriteria   Json?
+  failureCriteria   Json?
+  trainingObjective String?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+
+  organization Organization?     @relation(fields: [organizationId], references: [id])
+  sessions     RoleplaySession[]
+
+  @@index([organizationId])
+  @@index([difficulty])
+}
+
+model RoleplaySession {
+  id             String                @id @default(cuid())
+  organizationId String
+  userId         String
+  scenarioId     String
+  startedAt      DateTime              @default(now())
+  completedAt    DateTime?
+  status         RoleplaySessionStatus @default(ACTIVE)
+  objective      String?
+  overallScore   Int?
+  transcript     Json? // cached transcript copy
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+
+  organization Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  scenario     RoleplayScenario    @relation(fields: [scenarioId], references: [id])
+  messages     RoleplayMessage[]
+  evaluation   RoleplayEvaluation?
+
+  @@index([organizationId])
+  @@index([userId])
+  @@index([scenarioId])
+  @@index([status])
+}
+
+model RoleplayMessage {
+  id        String   @id @default(cuid())
+  sessionId String
+  speaker   Speaker
+  content   String   @db.Text
+  timestamp DateTime @default(now())
+  metadata  Json?
+
+  session RoleplaySession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+}
+
+model RoleplayEvaluation {
+  id                   String   @id @default(cuid())
+  sessionId            String   @unique
+  overallScore         Int
+  skills               Json // { discovery, listening, impactQuantification, objectionHandling, closing, ... }
+  strengths            Json? // string[]
+  weaknesses           Json?
+  decisiveMoments      Json? // [{ timestamp, prospectStatement, whatWasMissed, recommendedQuestion, severity }]
+  errorTypes           Json? // string[]
+  recommendedExercises Json?
+  createdAt            DateTime @default(now())
+
+  session RoleplaySession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+}
+
+model RoleplayScore {
+  id        String   @id @default(cuid())
+  userId    String
+  sessionId String?
+  skill     String // discovery | listening | questioning | etc. (§70)
+  score     Int // 0-100
+  source    String   @default("roleplay") // roleplay | real_call
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([skill])
+  @@index([source])
+}
+
+// ── Training / Seller Profile (§69-71) ───────────────────────────
+
+model TrainingPlan {
+  id             String   @id @default(cuid())
+  organizationId String
+  userId         String
+  title          String
+  week           Int?
+  focus          String?
+  exercises      Json? // TrainingExercise[] inline or relation
+  goal           String?  @db.Text
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization      Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  trainingExercises TrainingExercise[]
+
+  @@index([organizationId])
+  @@index([userId])
+}
+
+model TrainingExercise {
+  id         String     @id @default(cuid())
+  planId     String
+  title      String
+  type       String // discovery_drill | objection_drill | etc.
+  scenarioId String?
+  status     TaskStatus @default(TODO)
+  dueDate    DateTime?
+  createdAt  DateTime   @default(now())
+
+  plan TrainingPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  @@index([planId])
+}
+
+model SellerProfile {
+  id                 String   @id @default(cuid())
+  userId             String   @unique
+  organizationId     String
+  sellingStyle       String?
+  targetMarket       String?
+  targetTicket       String?
+  preferredMethod    String?
+  strengths          Json?
+  weaknesses         Json?
+  personalRisks      Json?
+  coachingPriorities Json?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+}
+
+model SellerSkill {
+  id           String   @id @default(cuid())
+  userId       String
+  skill        String // discovery | listening | questioning | qualification | painDiagnosis ...
+  currentScore Int // 0-100
+  targetScore  Int?
+  trend        String? // up | down | stable
+  confidence   Float? // 0-1
+  sampleSize   Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, skill])
+  @@index([userId])
+}
+
+// ── Ops / Observability (§91-92) ─────────────────────────────────
+
+model Activity {
+  id             String   @id @default(cuid())
+  organizationId String
+  userId         String?
+  entityType     String
+  entityId       String
+  action         String // created | updated | deleted | analyzed | etc.
+  metadata       Json?
+  createdAt      DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User?        @relation(fields: [userId], references: [id])
+
+  @@index([organizationId])
+  @@index([entityType, entityId])
+  @@index([createdAt])
+}
+
+model AuditLog {
+  id             String   @id @default(cuid())
+  organizationId String
+  userId         String?
+  action         String // user.login | deal.created | call.analyzed | etc. (§91)
+  entityType     String?
+  entityId       String?
+  metadata       Json?
+  ip             String?
+  userAgent      String?
+  createdAt      DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User?        @relation(fields: [userId], references: [id])
+
+  @@index([organizationId])
+  @@index([action])
+  @@index([createdAt])
+}
+
+model AIUsage {
+  id             String   @id @default(cuid())
+  organizationId String?
+  userId         String?
+  provider       String // openai | anthropic | gemini | openrouter
+  model          String
+  operation      String // generateText | generateStructured | embed | classify | etc.
+  agent          String? // ResearchAgent | CallAnalyst | RoleplayAgent | etc.
+  inputTokens    Int?
+  outputTokens   Int?
+  estimatedCost  Float?
+  latencyMs      Int?
+  status         String   @default("success") // success | error | timeout
+  createdAt      DateTime @default(now())
+
+  organization Organization? @relation(fields: [organizationId], references: [id])
+
+  @@index([organizationId])
+  @@index([provider])
+  @@index([createdAt])
+}
+
+model AIJob {
+  id             String    @id @default(cuid())
+  organizationId String?
+  type           String // analyze_transcript | generate_followup | evaluate_roleplay | etc.
+  status         JobStatus @default(PENDING)
+  payload        Json
+  result         Json?
+  error          String?   @db.Text
+  attempts       Int       @default(0)
+  maxAttempts    Int       @default(3)
+  runAt          DateTime? // for delayed / scheduled jobs
+  startedAt      DateTime?
+  completedAt    DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  organization Organization? @relation(fields: [organizationId], references: [id])
+
+  @@index([status])
+  @@index([runAt])
+  @@index([type])
+}
