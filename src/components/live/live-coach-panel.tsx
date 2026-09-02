@@ -5,8 +5,10 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
+import Link from "next/link";
 
 type Seg = { id:number, speaker:"prospect"|"closer", text:string, ts:string, objection?:{cat:string,label:string}, coach?:{suggestion:string,question:string,ai?:string|null} };
+type Perf = { overallScore:number, summary:string, strengths:{title:string}[], improvements:{title:string}[], recommendedRoleplays:{title:string,difficulty:string,scenarioId:string|null}[] };
 
 export function LiveCoachPanel(){
   const [listening,setListening]=useState(false);
@@ -55,6 +57,22 @@ export function LiveCoachPanel(){
 
   const lastCoach = segments.find(s=>s.coach);
   const objections = segments.filter(s=>s.objection);
+  const [perf,setPerf]=useState<Perf|null>(null);
+  const [perfLoading,setPerfLoading]=useState(false);
+  const [perfErr,setPerfErr]=useState<string|null>(null);
+
+  function transcriptText(){ return segments.slice().reverse().map(s=>`${s.speaker}: ${s.text}`).join("\n").slice(0,12000); }
+
+  async function analyzePerformance(save:boolean){
+    const txt=transcriptText();
+    if(txt.length<40){ setPerfErr("Grave pelo menos 2-3 falas antes"); return; }
+    setPerfLoading(true); setPerfErr(null);
+    const r=await fetch("/api/live/performance",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({ transcript: txt, provider:"meet", saveAsCall: save, title: save? `Video Call ${new Date().toLocaleString("pt-BR")}`: undefined })});
+    const j=await r.json().catch(()=>({}));
+    setPerfLoading(false);
+    if(!r.ok){ setPerfErr(j.error ?? "Falha"); return; }
+    setPerf(j as Perf);
+  }
 
   return (
     <div className="grid gap-4 lg:grid-cols-[1fr_380px]">
@@ -112,6 +130,24 @@ export function LiveCoachPanel(){
           <CardContent className="space-y-1.5 max-h-[280px] overflow-auto">
             {objections.length===0 && <p className="text-xs text-zinc-500">Nenhuma objeção detectada ainda.</p>}
             {objections.map(o=><div key={o.id} className="flex items-center justify-between rounded bg-zinc-900 px-2 py-1.5 text-xs"><span className="text-zinc-300">{o.text.slice(0,60)}</span><Badge>{o.objection?.label}</Badge></div>)}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="py-3"><CardTitle className="text-sm">Performance desta video call (mesmo agente das calls gravadas)</CardTitle></CardHeader>
+          <CardContent className="space-y-2">
+            <div className="flex gap-2"><Button size="sm" onClick={()=>analyzePerformance(false)} disabled={perfLoading||segments.length<2}>{perfLoading?"Analisando...":"Analisar agora"}</Button><Button size="sm" variant="outline" onClick={()=>analyzePerformance(true)} disabled={perfLoading||segments.length<2}>Salvar como call + analisar</Button></div>
+            {perfErr && <p className="text-xs text-red-400">{perfErr}</p>}
+            {!perf && <p className="text-xs text-zinc-500">Ao finalizar o Meet/Zoom, clique para o mesmo agente dizer onde foi bem, pontos de atenção e sugerir roleplays — igual a /calls/[id].</p>}
+            {perf && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2"><span className={`text-xl font-bold ${perf.overallScore>=75?"text-emerald-400":perf.overallScore>=55?"text-amber-400":"text-red-400"}`}>{perf.overallScore}</span><span className="text-xs text-zinc-300">{perf.summary}</span></div>
+                <div className="grid gap-2 sm:grid-cols-2 text-xs">
+                  <div><div className="font-medium text-emerald-400">✓ Foi bem</div><ul className="list-disc pl-4 text-zinc-400">{perf.strengths.slice(0,3).map((s,i)=><li key={i}>{s.title}</li>)}</ul></div>
+                  <div><div className="font-medium text-amber-400">⚠ Melhorias</div><ul className="list-disc pl-4 text-zinc-400">{perf.improvements.slice(0,3).map((s,i)=><li key={i}>{s.title}</li>)}</ul></div>
+                </div>
+                <div className="flex flex-wrap gap-1.5">{perf.recommendedRoleplays.slice(0,3).map((r,i)=> r.scenarioId ? <Link key={i} href={`/roleplay/${r.scenarioId}`}><Badge className="bg-sky-600">{r.title}</Badge></Link> : <Badge key={i}>{r.title}</Badge>)}</div>
+              </div>
+            )}
           </CardContent>
         </Card>
         <Card>
