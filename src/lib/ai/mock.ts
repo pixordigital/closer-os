@@ -56,6 +56,18 @@ const MOCK_ROLEPLAY_EVAL = {
   recommendedExercises: ["Discovery Drill — Impact", "Executive Roleplay Level 3"],
 };
 
+const MOCK_TRAINING_PLAN = {
+  title: "Semana 1 — Discovery & Impact [mock]",
+  focus: "Discovery",
+  goal: "Elevar Impact Quantification de 45 → 70 via drills focados.",
+  week: 1,
+  exercises: [
+    { title: "Impact Drill — Quantificar perda", type: "impact_drill", scenarioId: null },
+    { title: "Discovery Drill — Causa e consequência", type: "discovery_drill", scenarioId: null },
+    { title: "Executive Roleplay — CFO cético", type: "executive_drill", scenarioId: null },
+  ],
+};
+
 const MOCK_PROSPECT_REPLIES = [
   "Entendo, mas nosso time já tentou algo parecido e não funcionou. Por que seria diferente agora?",
   "Isso parece interessante, mas preciso entender o ROI. Quanto tempo até ver retorno?",
@@ -81,7 +93,8 @@ export class MockProvider implements AIProvider {
     const p = (opts.system ?? "") + " " + opts.prompt;
     const low = p.toLowerCase();
     let raw: unknown;
-    if (low.includes("decisivemoments") || low.includes("overallscore") || low.includes("avali") || low.includes("evaluation") || low.includes("roleplay") && low.includes("skills")) raw = MOCK_ROLEPLAY_EVAL;
+    if (low.includes("training") || low.includes("exercises") && low.includes("focus")) raw = MOCK_TRAINING_PLAN;
+    else if (low.includes("decisivemoments") || low.includes("overallscore") || low.includes("avali") || low.includes("evaluation") || low.includes("roleplay") && low.includes("skills")) raw = MOCK_ROLEPLAY_EVAL;
     else if (low.includes("pre-call") || low.includes("pre_call") || low.includes("brief")) raw = MOCK_PRE_CALL;
     else if (low.includes("analyze") || low.includes("transcript") || low.includes("discoveryupdates")) raw = MOCK_ANALYZE;
     else if (low.includes("follow-up") || low.includes("followup") || low.includes("drafts")) raw = MOCK_FOLLOW_UP;
