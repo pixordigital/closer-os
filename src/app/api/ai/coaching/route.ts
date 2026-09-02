@@ -8,6 +8,7 @@ import { getAIProvider } from "@/lib/ai/init";
 import { generateStructuredWithRetry, modelForTask } from "@/lib/ai/provider";
 import { logAIUsage, estimateCost } from "@/lib/ai/usage";
 import { auditLog } from "@/lib/audit";
+import { fireTriggers } from "@/lib/triggers";
 import { computeHealth } from "@/lib/discovery";
 
 export async function POST(req: Request) {
@@ -65,6 +66,7 @@ export async function POST(req: Request) {
       } as never,
     }).catch(() => {});
     await auditLog({ organizationId, userId, action: "coaching.generated", entityType: "CoachingSession", metadata: { periodDays } as never });
+    fireTriggers({ organizationId, event: "coaching.completed", payload: { periodDays, summary: result.summary.slice(0, 200) }, idempotencyKey: `coaching.completed:${userId}:${Date.now()}` });
 
     return NextResponse.json(result);
   } catch (e) {

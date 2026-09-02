@@ -4,6 +4,7 @@ import { requireTenant, parsePagination } from "@/lib/tenant";
 import { dealCreateSchema } from "@/lib/validations/crm";
 import { DISCOVERY_KEYS } from "@/lib/discovery";
 import { auditLog } from "@/lib/audit";
+import { fireTriggers } from "@/lib/triggers";
 
 export async function GET(req: Request) {
   const { organizationId } = await requireTenant();
@@ -57,5 +58,6 @@ export async function POST(req: Request) {
     skipDuplicates: true,
   });
   await auditLog({ organizationId, userId, action: "deal.created", entityType: "Deal", entityId: deal.id });
+  fireTriggers({ organizationId, event: "deal.created", payload: { id: deal.id, companyId: deal.companyId, stage: deal.stage }, idempotencyKey: `deal.created:${deal.id}` });
   return NextResponse.json(deal, { status: 201 });
 }

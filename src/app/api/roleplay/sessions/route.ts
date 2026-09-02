@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { requireTenant, parsePagination } from "@/lib/tenant";
 import { sessionCreateSchema } from "@/lib/validations/roleplay";
 import { auditLog } from "@/lib/audit";
+import { fireTriggers } from "@/lib/triggers";
 
 export async function GET(req: Request) {
   const { organizationId, userId } = await requireTenant();
@@ -47,6 +48,7 @@ export async function POST(req: Request) {
   });
 
   await auditLog({ organizationId, userId, action: "roleplay.started", entityType: "RoleplaySession", entityId: session.id });
+  fireTriggers({ organizationId, event: "roleplay.started", payload: { id: session.id, scenarioId: scenario.id }, idempotencyKey: `roleplay.started:${session.id}` });
   // return with hiddenContext stripped for seller; include messages
   const messages = await prisma.roleplayMessage.findMany({ where: { sessionId: session.id }, orderBy: { timestamp: "asc" } });
   const { hiddenContext: _hc, ...scenarioPublic } = scenario as unknown as { hiddenContext: unknown } & typeof scenario;

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { requireTenant } from "@/lib/tenant";
 import { dealUpdateSchema } from "@/lib/validations/crm";
 import { auditLog } from "@/lib/audit";
+import { fireTriggers } from "@/lib/triggers";
 
 async function getScoped(id: string, organizationId: string) {
   const d = await prisma.deal.findFirst({ where: { id, organizationId } });
@@ -48,6 +49,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     }
     const updated = await prisma.deal.update({ where: { id }, data: parsed.data as never });
     await auditLog({ organizationId, userId, action: "deal.updated", entityType: "Deal", entityId: id, metadata: { fields: Object.keys(parsed.data) } });
+    fireTriggers({ organizationId, event: "deal.updated", payload: { id, ...parsed.data }, idempotencyKey: `deal.updated:${id}:${Date.now()}` });
     return NextResponse.json(updated);
   } catch (e: unknown) {
     const status = (e as { status?: number })?.status ?? 500;

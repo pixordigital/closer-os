@@ -7,6 +7,7 @@ import { roleplayEvaluationSchema } from "@/lib/ai/roleplay-schemas";
 import { evaluationPrompt } from "@/lib/ai/roleplay-prompts";
 import { logAIUsage, estimateCost } from "@/lib/ai/usage";
 import { auditLog } from "@/lib/audit";
+import { fireTriggers } from "@/lib/triggers";
 
 export async function POST(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -72,6 +73,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
     const latencyMs = Date.now() - t0;
     await logAIUsage({ organizationId, userId, provider: provider.name, model, operation: "generateStructured", agent: "RoleplayEvaluator", latencyMs, estimatedCost: estimateCost(model, null, null) });
     await auditLog({ organizationId, userId, action: "roleplay.completed", entityType: "RoleplaySession", entityId: id, metadata: { overallScore: result.overallScore } as never });
+    fireTriggers({ organizationId, event: "roleplay.completed", payload: { id, sessionId: id, scenarioId: session.scenarioId, overallScore: result.overallScore }, idempotencyKey: `roleplay.completed:${id}` });
 
     return NextResponse.json({ evaluation, session: { ...session, status: "COMPLETED", overallScore: result.overallScore } });
   } catch (e) {

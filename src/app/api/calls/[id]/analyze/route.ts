@@ -7,6 +7,7 @@ import { getAIProvider } from "@/lib/ai/init";
 import { generateStructuredWithRetry, modelForTask } from "@/lib/ai/provider";
 import { logAIUsage, estimateCost } from "@/lib/ai/usage";
 import { auditLog } from "@/lib/audit";
+import { fireTriggers } from "@/lib/triggers";
 import { getDiscoveryWithHealth } from "@/lib/discovery";
 
 export async function POST(_req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -87,6 +88,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
     const latencyMs = Date.now() - t0;
     await logAIUsage({ organizationId, userId, provider: provider.name, model, operation: "generateStructured", agent: "CallAnalyst", latencyMs, estimatedCost: estimateCost(model, null, null) });
     await auditLog({ organizationId, userId, action: "call.analyzed", entityType: "Call", entityId: id, metadata: { insightsCreated, discoveryApplied } as never });
+    fireTriggers({ organizationId, event: "call.completed", payload: { id, callId: id, dealId: deal?.id ?? call.dealId, insightsCreated, discoveryApplied }, idempotencyKey: `call.analyzed:${id}:${Date.now()}` });
 
     return NextResponse.json({ ...result, _meta: { discoveryApplied, insightsCreated } });
   } catch (e) {

@@ -8,6 +8,7 @@ import { getAIProvider } from "@/lib/ai/init";
 import { generateStructuredWithRetry, modelForTask } from "@/lib/ai/provider";
 import { logAIUsage, estimateCost } from "@/lib/ai/usage";
 import { auditLog } from "@/lib/audit";
+import { fireTriggers } from "@/lib/triggers";
 
 export async function POST(req: Request) {
   const { organizationId, userId } = await requireTenant();
@@ -70,6 +71,7 @@ export async function POST(req: Request) {
     const latencyMs = Date.now() - t0;
     await logAIUsage({ organizationId, userId, provider: provider.name, model, operation: "generateStructured", agent: "FollowUpAgent", latencyMs, estimatedCost: estimateCost(model, null, null) });
     await auditLog({ organizationId, userId, action: "followup.generated", entityType: "Call", entityId: call.id, metadata: { count: created.length } as never });
+    for (const f of created) fireTriggers({ organizationId, event: "followup.created", payload: { id: f.id, dealId: f.dealId, callId: f.callId, type: f.type }, idempotencyKey: `followup.created:${f.id}` });
 
     return NextResponse.json({ drafts: result.drafts, followUps: created });
   } catch (e) {

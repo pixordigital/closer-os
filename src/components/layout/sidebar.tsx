@@ -3,7 +3,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import {
-  LayoutDashboard, Kanban, Building2, Users, Phone, Theater, Compass, GraduationCap, Calculator, CheckSquare, Bot, Settings, LogOut,
+  LayoutDashboard, Kanban, Building2, Users, Phone, Theater, Compass, GraduationCap, Calculator, CheckSquare, Bot, Settings, LogOut, Webhook, Workflow, ListTree,
 } from "lucide-react";
 
 const NAV = [
@@ -18,6 +18,9 @@ const NAV = [
   { href: "/roi", label: "ROI", icon: Calculator },
   { href: "/tasks", label: "Tasks", icon: CheckSquare },
   { href: "/command", label: "Command", icon: Bot },
+  { href: "/webhooks", label: "Webhooks", icon: Webhook },
+  { href: "/automations", label: "Automations", icon: Workflow },
+  { href: "/jobs", label: "Jobs", icon: ListTree },
 ];
 
 export function Sidebar() {

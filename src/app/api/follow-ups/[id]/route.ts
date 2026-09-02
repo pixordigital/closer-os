@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { requireTenant } from "@/lib/tenant";
 import { z } from "zod";
 import { auditLog } from "@/lib/audit";
+import { fireTriggers } from "@/lib/triggers";
 
 const patchSchema = z.object({
   subject: z.string().max(160).nullable().optional(),
@@ -38,6 +39,11 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
     const updated = await prisma.followUp.update({ where: { id }, data: parsed.data as never });
     await auditLog({ organizationId, userId, action: "followup.updated", entityType: "FollowUp", entityId: id, metadata: parsed.data as never });
+    if (parsed.data.status === "APPROVED") {
+      fireTriggers({ organizationId, event: "followup.approved", payload: { id, dealId: updated.dealId, callId: updated.callId, status: updated.status }, idempotencyKey: `followup.approved:${id}` });
+    } else if (parsed.data.status) {
+      fireTriggers({ organizationId, event: "followup.created", payload: { id, dealId: updated.dealId, callId: updated.callId, status: updated.status }, idempotencyKey: `followup.${parsed.data.status.toLowerCase()}:${id}` });
+    }
     return NextResponse.json(updated);
   } catch (e: unknown) {
     const status = (e as { status?: number })?.status ?? 500;

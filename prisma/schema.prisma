@@ -185,6 +185,8 @@ model Organization {
   trainingPlans     TrainingPlan[]
   activities        Activity[]
   auditLogs         AuditLog[]
+  webhookEndpoints  WebhookEndpoint[]
+  automationRules   AutomationRule[]
 
   @@index([slug])
 }
@@ -749,4 +751,80 @@ model AIJob {
   @@index([status])
   @@index([runAt])
   @@index([type])
+}
+
+// ── Webhooks §83 ─────────────────────────────────────────────────
+
+model WebhookEndpoint {
+  id             String   @id @default(cuid())
+  organizationId String
+  url            String
+  secret         String
+  events         Json // string[] — e.g. ["deal.created","call.completed"]
+  enabled        Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  deliveries   WebhookDelivery[]
+
+  @@index([organizationId])
+}
+
+model WebhookDelivery {
+  id             String   @id @default(cuid())
+  endpointId     String
+  organizationId String
+  event          String
+  payload        Json
+  idempotencyKey String?  @unique
+  status         String   @default("pending") // pending | success | failed | retrying
+  attempts       Int      @default(0)
+  lastError      String?  @db.Text
+  responseStatus Int?
+  responseBody   String?  @db.Text
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  endpoint WebhookEndpoint @relation(fields: [endpointId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([endpointId])
+  @@index([event])
+}
+
+// ── Automation Engine §84 ────────────────────────────────────────
+
+model AutomationRule {
+  id             String   @id @default(cuid())
+  organizationId String
+  trigger        String // e.g. call.completed | deal.created | roleplay.completed
+  enabled        Boolean  @default(true)
+  conditions     Json? // optional [{field,op,value}] — evaluated shallow in MVP
+  actions        Json // [{type, params}] — see src/lib/automation.ts for allowed types
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  runs         AutomationRun[]
+
+  @@index([organizationId])
+  @@index([trigger])
+}
+
+model AutomationRun {
+  id             String   @id @default(cuid())
+  ruleId         String
+  organizationId String
+  triggerEvent   String
+  triggerPayload Json?
+  status         String   @default("pending") // pending | success | failed
+  result         Json?
+  error          String?  @db.Text
+  createdAt      DateTime @default(now())
+
+  rule AutomationRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+
+  @@index([ruleId])
+  @@index([organizationId])
 }

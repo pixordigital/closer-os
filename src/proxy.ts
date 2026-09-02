@@ -1,13 +1,25 @@
 import { NextResponse, type NextRequest } from "next/server";
 import * as jose from "jose";
 
-const PUBLIC = ["/login", "/register", "/api/auth/login", "/api/auth/register", "/api/health", "/api/ready"];
+const PUBLIC = [
+  "/login",
+  "/register",
+  "/api/auth/login",
+  "/api/auth/register",
+  "/api/health",
+  "/api/ready",
+  "/api/webhooks/inbound",
+];
 
 function isPublic(pathname: string): boolean {
-  return PUBLIC.some((p) => pathname === p || pathname.startsWith(p + "/")) || pathname.startsWith("/_next") || pathname === "/favicon.ico";
+  return (
+    PUBLIC.some((p) => pathname === p || pathname.startsWith(p + "/")) ||
+    pathname.startsWith("/_next") ||
+    pathname === "/favicon.ico"
+  );
 }
 
-export async function middleware(req: NextRequest) {
+export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
   if (isPublic(pathname)) return NextResponse.next();
 
@@ -20,7 +32,7 @@ export async function middleware(req: NextRequest) {
   }
 
   const secret = process.env.AUTH_SECRET;
-  if (!secret) return NextResponse.next(); // let handler error loudly
+  if (!secret) return NextResponse.next();
   try {
     await jose.jwtVerify(token, new TextEncoder().encode(secret));
     return NextResponse.next();
@@ -31,4 +43,6 @@ export async function middleware(req: NextRequest) {
   }
 }
 
-export const config = { matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"] };
+export const config = {
+  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+};

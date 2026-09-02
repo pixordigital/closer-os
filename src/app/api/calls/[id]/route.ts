@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { requireTenant } from "@/lib/tenant";
 import { callUpdateSchema } from "@/lib/validations/call";
 import { auditLog } from "@/lib/audit";
+import { fireTriggers } from "@/lib/triggers";
 
 async function getScoped(id: string, organizationId: string) {
   const c = await prisma.call.findFirst({
@@ -45,6 +46,9 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
     const updated = await prisma.call.update({ where: { id }, data: parsed.data as never });
     await auditLog({ organizationId, userId, action: "call.updated", entityType: "Call", entityId: id });
+    if ((parsed.data as { status?: string }).status === "COMPLETED") {
+      fireTriggers({ organizationId, event: "call.completed", payload: { id, callId: id, dealId: updated.dealId, status: updated.status }, idempotencyKey: `call.completed:${id}` });
+    }
     return NextResponse.json(updated);
   } catch (e: unknown) {
     const status = (e as { status?: number })?.status ?? 500;

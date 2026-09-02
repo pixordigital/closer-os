@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { requireTenant, parsePagination } from "@/lib/tenant";
 import { callCreateSchema } from "@/lib/validations/call";
 import { auditLog } from "@/lib/audit";
+import { fireTriggers } from "@/lib/triggers";
 
 export async function GET(req: Request) {
   const { organizationId } = await requireTenant();
@@ -55,5 +56,6 @@ export async function POST(req: Request) {
     data: { organizationId, ...parsed.data } as never,
   });
   await auditLog({ organizationId, userId, action: "call.created", entityType: "Call", entityId: call.id });
+  fireTriggers({ organizationId, event: "call.created", payload: { id: call.id, dealId: call.dealId, status: call.status }, idempotencyKey: `call.created:${call.id}` });
   return NextResponse.json(call, { status: 201 });
 }
