@@ -4,9 +4,13 @@ import { requireTenant } from "@/lib/tenant";
 import { inboundSchema } from "@/lib/validations/webhook";
 import { verifySignature } from "@/lib/webhooks";
 import { auditLog } from "@/lib/audit";
+import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
+import { tooMany } from "@/lib/api-error";
 
 // POST /api/webhooks/inbound — generic inbound webhook (HMAC + idempotency)
 export async function POST(req: Request) {
+  const rl = checkRateLimit(`webhook:inbound:${getClientIp(req)}`, { windowMs: 60_000, max: 30 });
+  if (!rl.ok) return tooMany(rl.retryAfterMs);
   const raw = await req.text();
   let body: unknown;
   try { body = raw ? JSON.parse(raw) : {}; } catch { return NextResponse.json({ error:"Invalid JSON" }, { status:400 }); }

@@ -3,12 +3,16 @@ import { registerSchema } from "@/lib/validations/auth";
 import { prisma } from "@/lib/db";
 import { hashPassword, setSessionCookie } from "@/lib/auth";
 import { auditLog } from "@/lib/audit";
+import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
+import { tooMany } from "@/lib/api-error";
 
 function slugify(s: string): string {
   return s.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40) || "org";
 }
 
 export async function POST(req: Request) {
+  const rl = checkRateLimit(`auth:register:${getClientIp(req)}`, { windowMs: 60_000, max: 5 });
+  if (!rl.ok) return tooMany(rl.retryAfterMs);
   const body = await req.json().catch(() => null);
   const parsed = registerSchema.safeParse(body);
   if (!parsed.success) {
