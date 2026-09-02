@@ -167,26 +167,27 @@ model Organization {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  memberships       Membership[]
-  companies         Company[]
-  contacts          Contact[]
-  deals             Deal[]
-  calls             Call[]
-  objections        Objection[]
-  followUps         FollowUp[]
-  tasks             Task[]
-  roiModels         ROIModel[]
-  aiInsights        AIInsight[]
-  aiUsages          AIUsage[]
-  aiJobs            AIJob[]
-  roleplayScenarios RoleplayScenario[]
-  roleplaySessions  RoleplaySession[]
-  coachingSessions  CoachingSession[]
-  trainingPlans     TrainingPlan[]
-  activities        Activity[]
-  auditLogs         AuditLog[]
-  webhookEndpoints  WebhookEndpoint[]
-  automationRules   AutomationRule[]
+  memberships            Membership[]
+  companies              Company[]
+  contacts               Contact[]
+  deals                  Deal[]
+  calls                  Call[]
+  objections             Objection[]
+  followUps              FollowUp[]
+  tasks                  Task[]
+  roiModels              ROIModel[]
+  aiInsights             AIInsight[]
+  aiUsages               AIUsage[]
+  aiJobs                 AIJob[]
+  roleplayScenarios      RoleplayScenario[]
+  roleplaySessions       RoleplaySession[]
+  coachingSessions       CoachingSession[]
+  trainingPlans          TrainingPlan[]
+  activities             Activity[]
+  auditLogs              AuditLog[]
+  webhookEndpoints       WebhookEndpoint[]
+  automationRules        AutomationRule[]
+  integrationConnections IntegrationConnection[]
 
   @@index([slug])
 }
@@ -827,4 +828,21 @@ model AutomationRun {
 
   @@index([ruleId])
   @@index([organizationId])
+}
+
+// ── Integrations §85 (Phase 11) ───────────────────────────────
+model IntegrationConnection {
+  id             String   @id @default(cuid())
+  organizationId String
+  provider       String
+  kind           String // calendar | transcript | crm
+  status         String   @default("connected")
+  config         Json?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([provider])
 }

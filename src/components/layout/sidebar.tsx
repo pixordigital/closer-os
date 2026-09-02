@@ -3,7 +3,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import {
-  LayoutDashboard, Kanban, Building2, Users, Phone, Theater, Compass, GraduationCap, Calculator, CheckSquare, Bot, Settings, LogOut, Webhook, Workflow, ListTree,
+  LayoutDashboard, Kanban, Building2, Users, Phone, Theater, Compass, GraduationCap, Calculator, CheckSquare, Bot, Settings, LogOut, Webhook, Workflow, ListTree, Plug,
 } from "lucide-react";
 
 const NAV = [
@@ -21,6 +21,7 @@ const NAV = [
   { href: "/webhooks", label: "Webhooks", icon: Webhook },
   { href: "/automations", label: "Automations", icon: Workflow },
   { href: "/jobs", label: "Jobs", icon: ListTree },
+  { href: "/integrations", label: "Integrations", icon: Plug },
 ];
 
 export function Sidebar() {
