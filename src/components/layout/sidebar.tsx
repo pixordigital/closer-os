@@ -3,7 +3,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import {
-  LayoutDashboard, Kanban, Building2, Users, Phone, Theater, Compass, GraduationCap, Calculator, CheckSquare, Bot, Settings, LogOut, Webhook, Workflow, ListTree, Plug, Radio,
+  LayoutDashboard, Kanban, Building2, Users, Phone, Theater, Compass, GraduationCap, Calculator, CheckSquare, Bot, Settings, LogOut, Webhook, Workflow, ListTree, Plug, Radio, ShieldAlert,
 } from "lucide-react";
 
 const NAV = [
@@ -13,6 +13,7 @@ const NAV = [
   { href: "/contacts", label: "Contacts", icon: Users },
   { href: "/calls", label: "Calls", icon: Phone },
   { href: "/live", label: "Live Coach", icon: Radio },
+  { href: "/objections", label: "Objeções", icon: ShieldAlert },
   { href: "/roleplay", label: "Roleplay", icon: Theater },
   { href: "/discovery", label: "Discovery", icon: Compass },
   { href: "/coaching", label: "Coaching", icon: GraduationCap },

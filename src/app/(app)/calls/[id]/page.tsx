@@ -8,6 +8,7 @@ import { TranscriptEditor } from "@/components/calls/transcript-editor";
 import { AnalyzeCallButton } from "@/components/ai/analyze-call-button";
 import { FollowUpPanel } from "@/components/ai/follow-up-panel";
 import { CopilotPanel } from "@/components/copilot/CopilotPanel";
+import { MapObjectionsButton } from "@/components/calls/map-objections-button";
 
 export default async function CallDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -56,8 +57,9 @@ export default async function CallDetailPage({ params }: { params: Promise<{ id:
             <div className="flex justify-between"><dt className="text-zinc-500">Deal</dt><dd className="text-zinc-200">{call.deal ? <Link href={`/deals/${call.deal.id}`} className="text-sky-400 hover:underline">{call.deal.name}</Link> : "—"}</dd></div>
             <div className="flex justify-between"><dt className="text-zinc-500">Agendada</dt><dd className="text-zinc-200">{call.scheduledAt ? new Date(call.scheduledAt).toLocaleString("pt-BR") : "—"}</dd></div>
           </dl>
-          <div className="mt-4">
+          <div className="mt-4 flex gap-2">
             <AnalyzeCallButton callId={call.id} hasTranscript={!!call.transcript?.content?.trim()} />
+            <MapObjectionsButton callId={call.id} />
           </div>
           {insights.length > 0 && (
             <div className="mt-4 space-y-2">
