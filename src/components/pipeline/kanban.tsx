@@ -21,13 +21,15 @@ const STAGE_COLOR: Record<string,string> = {
 type Deal = {
   id:string; name:string; stage:string; value:number|null; currency:string;
   probability:number|null; nextStep:string|null; expectedCloseDate:string|null;
-  company:{name:string}; primaryContact:{name:string}|null;
+  company:{name:string}; primaryContact:{name:string}|null; health:number;
 };
 
 function fmtBRL(v:number|null) {
   if(v==null) return "—";
   return new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL", maximumFractionDigits:0}).format(v);
 }
+function healthColor(s:number){ if(s>=75) return "text-emerald-400"; if(s>=45) return "text-amber-400"; return "text-red-400"; }
+function healthBarColor(s:number){ if(s>=75) return "bg-emerald-500"; if(s>=45) return "bg-amber-500"; return "bg-red-500"; }
 
 export function Kanban({ initialDeals }: { initialDeals: Deal[] }) {
   const [deals, setDeals] = useState(initialDeals);
@@ -77,6 +79,10 @@ export function Kanban({ initialDeals }: { initialDeals: Deal[] }) {
                     <div className="mt-2 flex items-center justify-between text-xs">
                       <span className="font-medium text-zinc-200">{fmtBRL(d.value)}</span>
                       {d.probability!=null && <span className="text-zinc-500">{d.probability}%</span>}
+                    </div>
+                    <div className="mt-2 flex items-center gap-1.5">
+                      <span className={`text-[11px] font-semibold ${healthColor(d.health)}`}>{d.health}%</span>
+                      <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-zinc-800"><div className={`h-full ${healthBarColor(d.health)}`} style={{ width: `${d.health}%` }} /></div>
                     </div>
                     {d.nextStep && <div className="mt-1.5 truncate text-[11px] text-zinc-500">→ {d.nextStep}</div>}
                     {!d.nextStep && d.stage!=="WON" && d.stage!=="LOST" && <div className="mt-1.5 text-[11px] text-amber-500/80">sem next step</div>}

@@ -1,6 +1,7 @@
 import { requireTenant } from "@/lib/tenant";
 import { prisma } from "@/lib/db";
 import { Kanban } from "@/components/pipeline/kanban";
+import { computeHealth } from "@/lib/discovery";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
@@ -23,6 +24,7 @@ export default async function PipelinePage({ searchParams }: { searchParams: Pro
     include: {
       company: { select: { name: true } },
       primaryContact: { select: { name: true } },
+      discoveryFields: { select: { status: true, key: true } },
     },
   });
 
@@ -38,6 +40,7 @@ export default async function PipelinePage({ searchParams }: { searchParams: Pro
     expectedCloseDate: d.expectedCloseDate ? d.expectedCloseDate.toISOString() : null,
     company: d.company,
     primaryContact: d.primaryContact,
+    health: computeHealth(d.discoveryFields),
   }));
 
   return (

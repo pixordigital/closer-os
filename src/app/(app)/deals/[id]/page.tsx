@@ -2,6 +2,8 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { requireTenant } from "@/lib/tenant";
 import { prisma } from "@/lib/db";
+import { getDiscoveryWithHealth, healthColor, healthBarColor } from "@/lib/discovery";
+import { DiscoveryPanel } from "@/components/discovery/discovery-panel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
@@ -24,11 +26,14 @@ export default async function DealDetailPage({ params }: { params: Promise<{ id:
   });
   if (!deal) notFound();
 
+  const { fields: discoveryFields, health } = await getDiscoveryWithHealth(id);
+
   const riskSignals: string[] = [];
   if (!deal.primaryContactId) riskSignals.push("Sem decisor");
   if (!deal.nextStep) riskSignals.push("Sem next step");
   if (!deal.urgency) riskSignals.push("Sem urgência");
   if (!deal.painSummary) riskSignals.push("Sem dor mapeada");
+  if (health < 45) riskSignals.push(`Discovery fraco (${health}%)`);
 
   return (
     <div className="p-6 sm:p-8">
@@ -38,12 +43,16 @@ export default async function DealDetailPage({ params }: { params: Promise<{ id:
             <Badge>{deal.stage}</Badge>
             {deal.probability != null && <span className="text-xs text-zinc-500">{deal.probability}%</span>}
             <span className="text-xs text-zinc-600">{deal.currency}</span>
+            <span className={`text-xs font-semibold ${healthColor(health)}`}>Discovery {health}%</span>
           </div>
           <h1 className="mt-2 text-2xl font-semibold tracking-tight">{deal.name}</h1>
           <p className="mt-1 text-sm text-zinc-400">
             <Link href={`/companies/${deal.company.id}`} className="hover:underline text-zinc-200">{deal.company.name}</Link>
             {deal.primaryContact ? <> · <Link href={`/contacts/${deal.primaryContact.id}`} className="hover:underline">{deal.primaryContact.name}</Link> {deal.primaryContact.role && <span className="text-zinc-500">({deal.primaryContact.role})</span>}</> : <> · <span className="text-amber-500/80">sem contato principal</span></>}
           </p>
+          <div className="mt-2 h-1.5 w-32 overflow-hidden rounded-full bg-zinc-800">
+            <div className={`h-full ${healthBarColor(health)}`} style={{ width: `${health}%` }} />
+          </div>
         </div>
         <div className="flex gap-2">
           <Link href={`/deals/${deal.id}/edit`}><Button variant="outline" size="sm">Editar</Button></Link>
@@ -73,6 +82,10 @@ export default async function DealDetailPage({ params }: { params: Promise<{ id:
             {riskSignals.length === 0 ? <span className="text-emerald-400">Baixo risco</span> : <ul className="list-disc pl-4 text-amber-300/90">{riskSignals.map(s=><li key={s}>{s}</li>)}</ul>}
           </div>
         </div>
+      </div>
+
+      <div className="mt-6">
+        <DiscoveryPanel dealId={deal.id} initialFields={discoveryFields as never} initialHealth={health} />
       </div>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-2">

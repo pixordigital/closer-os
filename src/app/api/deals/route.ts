@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireTenant, parsePagination } from "@/lib/tenant";
 import { dealCreateSchema } from "@/lib/validations/crm";
+import { DISCOVERY_KEYS } from "@/lib/discovery";
 import { auditLog } from "@/lib/audit";
 
 export async function GET(req: Request) {
@@ -50,6 +51,10 @@ export async function POST(req: Request) {
 
   const deal = await prisma.deal.create({
     data: { organizationId, ...parsed.data } as never,
+  });
+  await prisma.discoveryField.createMany({
+    data: DISCOVERY_KEYS.map((key) => ({ dealId: deal.id, key, status: "UNKNOWN" as const, source: "CRM" as const })),
+    skipDuplicates: true,
   });
   await auditLog({ organizationId, userId, action: "deal.created", entityType: "Deal", entityId: deal.id });
   return NextResponse.json(deal, { status: 201 });
