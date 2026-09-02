@@ -46,16 +46,43 @@ const MOCK_COACHING = {
   recommendations: ["Treino: Quantify Impact (Level 3)", "Pergunte sempre: o que acontece se nada mudar?"],
 };
 
+const MOCK_ROLEPLAY_EVAL = {
+  overallScore: 62,
+  skills: { discovery: 58, listening: 65, impactQuantification: 45, objectionHandling: 60, closing: 55, questioning: 60 },
+  strengths: ["Boa abertura", "Escuta ativa em 2 momentos"],
+  weaknesses: ["Não quantificou impacto", "Não mapeou decisor"],
+  decisiveMoments: [{ prospectStatement: "Perdemos leads todo mês", whatWasMissed: "Não quantificou valor", recommendedQuestion: "Quanto vale cada lead perdido?", severity: "high" as const }],
+  errorTypes: ["missed_impact", "no_dm"],
+  recommendedExercises: ["Discovery Drill — Impact", "Executive Roleplay Level 3"],
+};
+
+const MOCK_PROSPECT_REPLIES = [
+  "Entendo, mas nosso time já tentou algo parecido e não funcionou. Por que seria diferente agora?",
+  "Isso parece interessante, mas preciso entender o ROI. Quanto tempo até ver retorno?",
+  "Olha, o budget está apertado este trimestre. Como vocês justificam o investimento?",
+  "Quem mais precisaria aprovar isso internamente? Não decido sozinho.",
+  "E se nada mudar? Hoje a dor existe, mas não está travando a operação. Por que priorizar agora?",
+];
+
 export class MockProvider implements AIProvider {
   readonly name = "mock";
   async generateText(opts: GenerateTextOpts): Promise<string> {
+    const p = (opts.system ?? "") + " " + opts.prompt;
+    const low = p.toLowerCase();
+    if (low.includes("prospect") || low.includes("roleplay") || low.includes("hiddencontext") || low.includes("persona")) {
+      const lastUser = opts.prompt.slice(-300).toLowerCase();
+      if (lastUser.includes("preço") || lastUser.includes("valor") || lastUser.includes("budget")) return "Preço é uma preocupação real aqui. Nosso CFO vai questionar — qual o payback? E se não tivermos budget aprovado?";
+      if (lastUser.includes("quem") || lastUser.includes("decide") || lastUser.includes("aprova")) return "Normalmente eu e o CFO decidimos juntos, mas o CEO dá a palavra final em investimentos acima de R$ 30k.";
+      return MOCK_PROSPECT_REPLIES[Math.floor(Math.random() * MOCK_PROSPECT_REPLIES.length)] + " [mock prospect]";
+    }
     return `[mock:${opts.prompt.slice(0, 80)}]`;
   }
   async generateStructured<T>(opts: GenerateStructuredOpts<T>): Promise<T> {
     const p = (opts.system ?? "") + " " + opts.prompt;
     const low = p.toLowerCase();
     let raw: unknown;
-    if (low.includes("pre-call") || low.includes("pre_call") || low.includes("brief")) raw = MOCK_PRE_CALL;
+    if (low.includes("decisivemoments") || low.includes("overallscore") || low.includes("avali") || low.includes("evaluation") || low.includes("roleplay") && low.includes("skills")) raw = MOCK_ROLEPLAY_EVAL;
+    else if (low.includes("pre-call") || low.includes("pre_call") || low.includes("brief")) raw = MOCK_PRE_CALL;
     else if (low.includes("analyze") || low.includes("transcript") || low.includes("discoveryupdates")) raw = MOCK_ANALYZE;
     else if (low.includes("follow-up") || low.includes("followup") || low.includes("drafts")) raw = MOCK_FOLLOW_UP;
     else if (low.includes("coach")) raw = MOCK_COACHING;
