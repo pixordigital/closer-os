@@ -56,6 +56,29 @@ const MOCK_ROLEPLAY_EVAL = {
   recommendedExercises: ["Discovery Drill — Impact", "Executive Roleplay Level 3"],
 };
 
+const MOCK_PERFORMANCE = {
+  overallScore: 64,
+  summary: "Call com boa abertura e escuta, mas impacto não quantificado e DM não mapeado — mesma fraqueza das últimas 3 calls.",
+  strengths: [
+    { title: "Abertura consultiva", evidence: "Seller: 'Me conta do contexto de vocês'", whyGood: "Gera rapport e abre discovery" },
+    { title: "Escuta ativa em dor", evidence: "Prospect: 'perde 30 leads/mês' → Seller reconheceu", whyGood: "Valida dor sem interromper" },
+  ],
+  improvements: [
+    { title: "Não quantificou impacto financeiro", evidence: "Após dor, pulou para pitch sem perguntar valor", severity: "high", suggestion: "Pergunte: 'Quanto custa cada lead perdido?'" },
+    { title: "Não mapeou decisor", evidence: "Nenhuma pergunta sobre quem decide", severity: "high", suggestion: "Pergunte: 'Quem além de você avalia?'" },
+    { title: "Pitch precoce", evidence: "Apresentou solução antes de urgência", severity: "medium", suggestion: "Adie pitch até mapear causa e consequência" },
+  ],
+  decisiveMoments: [
+    { prospectStatement: "Perdemos 30 leads por mês", whatWasMissed: "Não quantificou valor mensal", recommendedQuestion: "Quanto vale cada lead? E por mês?", impact: "Sem impacto não há urgência", severity: "high" },
+  ],
+  recommendedRoleplays: [
+    { title: "CFO — SaaS 50-200 (Nível 4)", difficulty: "LEVEL_4", trainingObjective: "Discovery — Quantificar impacto", reason: "Treina impacto, sua maior fraqueza", scenarioId: null },
+    { title: "Diretora Comercial — Energia (N2)", difficulty: "LEVEL_2", trainingObjective: "Next Step e Fechamento", reason: "Pratica next step claro", scenarioId: null },
+    { title: "BOSS — Enterprise 4 Stakeholders", difficulty: "BOSS", trainingObjective: "Negociação Complexa", reason: "Fortalece mapeamento de DM múltiplo", scenarioId: null },
+  ],
+  nextSteps: ["Refazer discovery de impacto na próxima call", "Fazer 2 roleplays de quantificação esta semana"],
+};
+
 const MOCK_TRAINING_PLAN = {
   title: "Semana 1 — Discovery & Impact [mock]",
   focus: "Discovery",
@@ -93,7 +116,8 @@ export class MockProvider implements AIProvider {
     const p = (opts.system ?? "") + " " + opts.prompt;
     const low = p.toLowerCase();
     let raw: unknown;
-    if (low.includes("training") || low.includes("exercises") && low.includes("focus")) raw = MOCK_TRAINING_PLAN;
+    if (low.includes("performance") || low.includes("strengths") && low.includes("improvements") && low.includes("recommendedroleplays")) raw = MOCK_PERFORMANCE;
+    else if (low.includes("training") || low.includes("exercises") && low.includes("focus")) raw = MOCK_TRAINING_PLAN;
     else if (low.includes("decisivemoments") || low.includes("overallscore") || low.includes("avali") || low.includes("evaluation") || low.includes("roleplay") && low.includes("skills")) raw = MOCK_ROLEPLAY_EVAL;
     else if (low.includes("pre-call") || low.includes("pre_call") || low.includes("brief")) raw = MOCK_PRE_CALL;
     else if (low.includes("analyze") || low.includes("transcript") || low.includes("discoveryupdates")) raw = MOCK_ANALYZE;

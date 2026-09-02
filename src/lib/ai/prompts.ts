@@ -69,3 +69,29 @@ Recent insights (missed opportunities): ${JSON.stringify(ctx.recentInsights).sli
 Discovery health médio: ${ctx.avgHealth}%
 `;
 }
+
+export function performanceCoachPrompt(ctx: {
+  transcript: string; deal: unknown; company: unknown; insights: unknown[]; skills: unknown[];
+}) {
+  return `${HALLUCINATION_GUARD}
+
+Tarefa: PERFORMANCE COACH — analise transcript da call e diga ao closer onde foi BEM, pontos de ATENÇÃO/MELHORIA e recomende cenários de ROLEPLAY para treinar.
+
+Retorne:
+- overallScore 0-100
+- summary 2-3 frases diretas
+- strengths[] com evidence (quote do transcript) + whyGood
+- improvements[] com severity + suggestion acionável
+- decisiveMoments[] prospectStatement + whatWasMissed + recommendedQuestion + impact
+- recommendedRoleplays[] com title/difficulty/trainingObjective/reason — escolha cenários que fortalecem fraquezas detectadas (ex: discovery, impacto, objeção preço, closing)
+- nextSteps[]
+
+Transcript (pt-BR):
+"""${ctx.transcript.slice(0, 15000)}"""
+
+Deal: ${JSON.stringify(ctx.deal).slice(0, 3000)}
+Company: ${JSON.stringify(ctx.company).slice(0, 2000)}
+Insights prévios da call: ${JSON.stringify(ctx.insights).slice(0, 3000)}
+SellerSkills: ${JSON.stringify(ctx.skills).slice(0, 2000)}
+`;
+}

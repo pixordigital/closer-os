@@ -65,3 +65,35 @@ export const coachingSchema = z.object({
   recommendations: z.array(z.string()).default([]),
 });
 export type CoachingResult = z.infer<typeof coachingSchema>;
+
+export const performanceCoachSchema = z.object({
+  overallScore: z.number().min(0).max(100),
+  summary: z.string().min(1),
+  strengths: z.array(z.object({
+    title: z.string().min(1),
+    evidence: z.string().min(1),
+    whyGood: z.string().min(1),
+  })).default([]),
+  improvements: z.array(z.object({
+    title: z.string().min(1),
+    evidence: z.string().min(1),
+    severity: z.enum(["low","medium","high"]),
+    suggestion: z.string().min(1),
+  })).default([]),
+  decisiveMoments: z.array(z.object({
+    prospectStatement: z.string().min(1),
+    whatWasMissed: z.string().min(1),
+    recommendedQuestion: z.string().min(1),
+    impact: z.string().min(1),
+    severity: z.enum(["low","medium","high"]),
+  })).default([]),
+  recommendedRoleplays: z.array(z.object({
+    title: z.string().min(1),
+    difficulty: z.string().min(1),
+    trainingObjective: z.string().min(1),
+    reason: z.string().min(1),
+    scenarioId: z.string().nullable().optional(),
+  })).default([]),
+  nextSteps: z.array(z.string()).default([]),
+});
+export type PerformanceCoachResult = z.infer<typeof performanceCoachSchema>;

@@ -9,6 +9,7 @@ import { AnalyzeCallButton } from "@/components/ai/analyze-call-button";
 import { FollowUpPanel } from "@/components/ai/follow-up-panel";
 import { CopilotPanel } from "@/components/copilot/CopilotPanel";
 import { MapObjectionsButton } from "@/components/calls/map-objections-button";
+import { PerformancePanel } from "@/components/coaching/performance-panel";
 
 export default async function CallDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -89,6 +90,10 @@ export default async function CallDetailPage({ params }: { params: Promise<{ id:
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
         <FollowUpPanel callId={call.id} dealId={call.dealId} />
         <CopilotPanel callId={call.id} dealId={call.dealId} />
+      </div>
+
+      <div className="mt-6">
+        <PerformancePanel callId={call.id} hasTranscript={!!call.transcript?.content?.trim()} />
       </div>
     </div>
   );
