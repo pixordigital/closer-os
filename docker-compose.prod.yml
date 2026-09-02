@@ -2,9 +2,9 @@ services:
   db:
     image: postgres:16-alpine
     restart: unless-stopped
+    env_file: .env.prod
     environment:
       POSTGRES_USER: closer
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: closer_os
     volumes:
       - pgdata:/var/lib/postgresql/data
@@ -23,8 +23,6 @@ services:
     ports:
       - "6002:3000"
     env_file: .env.prod
-    environment:
-      DATABASE_URL: postgresql://closer:${DB_PASSWORD}@db:5432/closer_os?schema=public
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/api/health || exit 1"]
       interval: 15s
