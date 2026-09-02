@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import * as jose from "jose";
 
 const PUBLIC = [
+  "/",
   "/login",
   "/register",
   "/api/auth/login",
