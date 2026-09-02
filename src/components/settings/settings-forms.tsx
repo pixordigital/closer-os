@@ -5,8 +5,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { useI18n } from "@/components/i18n/provider";
+import type { Locale } from "@/lib/i18n";
 
-export function SettingsForms({ initial }:{ initial:{ user:{id:string,name:string,email:string,createdAt:Date}, org:{id:string,name:string,slug:string,createdAt:Date}, membership:{role:string}, memberCount:number, email:string } }){
+export function SettingsForms({ initial }:{ initial:{ user:{id:string,name:string,email:string,createdAt:Date,locale?:string}, org:{id:string,name:string,slug:string,createdAt:Date}, membership:{role:string}, memberCount:number, email:string } }){
+  const { locale, setLocale } = useI18n();
   const [userName,setUserName]=useState(initial.user.name);
   const [orgName,setOrgName]=useState(initial.org.name);
   const [msg,setMsg]=useState<string|null>(null);
@@ -63,6 +66,19 @@ export function SettingsForms({ initial }:{ initial:{ user:{id:string,name:strin
           <div className="space-y-1.5"><Label>Confirmar nova senha</Label><Input type="password" value={pw.confirm} onChange={e=>setPw({...pw,confirm:e.target.value})} /></div>
           <Button size="sm" onClick={changePw} disabled={pwLoading}>{pwLoading?"Alterando...":"Alterar senha"}</Button>
           {pwMsg && <p className="text-xs text-zinc-400">{pwMsg}</p>}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader><CardTitle className="text-sm">Idioma / Language</CardTitle></CardHeader>
+        <CardContent className="space-y-3">
+          <div className="space-y-1.5"><Label>Escolha / Choose</Label>
+            <select value={locale} onChange={e=>setLocale(e.target.value as Locale)} className="h-9 w-full rounded-md border border-zinc-800 bg-zinc-900 px-3 text-sm">
+              <option value="pt-BR">Português (BR)</option>
+              <option value="en">English</option>
+            </select>
+          </div>
+          <p className="text-xs text-zinc-500">Salvo automaticamente no perfil e cookie. / Auto-saved to profile and cookie.</p>
         </CardContent>
       </Card>
 

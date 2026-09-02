@@ -5,7 +5,7 @@ import { SettingsForms } from "@/components/settings/settings-forms";
 export default async function SettingsPage(){
   const { organizationId, userId, email } = await requireTenant();
   const [user, org, membership, memberCount] = await Promise.all([
-    prisma.user.findUnique({ where:{ id: userId }, select:{ id:true, name:true, email:true, createdAt:true } }),
+    prisma.user.findUnique({ where:{ id: userId }, select:{ id:true, name:true, email:true, createdAt:true, locale:true } }),
     prisma.organization.findUnique({ where:{ id: organizationId }, select:{ id:true, name:true, slug:true, createdAt:true } }),
     prisma.membership.findFirst({ where:{ userId, organizationId }, select:{ role:true } }),
     prisma.membership.count({ where:{ organizationId } }),
