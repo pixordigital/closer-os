@@ -4,6 +4,8 @@ import { requireTenant } from "@/lib/tenant";
 import { dealUpdateSchema } from "@/lib/validations/crm";
 import { auditLog } from "@/lib/audit";
 import { fireTriggers } from "@/lib/triggers";
+import { validateStageGate } from "@/lib/stage-gates";
+import { computeHealth } from "@/lib/discovery";
 
 async function getScoped(id: string, organizationId: string) {
   const d = await prisma.deal.findFirst({ where: { id, organizationId } });
@@ -34,7 +36,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   const { id } = await params;
   const { organizationId, userId } = await requireTenant();
   try {
-    await getScoped(id, organizationId);
+    const current = await getScoped(id, organizationId);
     const body = await req.json().catch(() => null);
     const parsed = dealUpdateSchema.safeParse(body);
     if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
@@ -46,6 +48,17 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     if (parsed.data.primaryContactId) {
       const ct = await prisma.contact.findFirst({ where: { id: parsed.data.primaryContactId as string, organizationId } });
       if (!ct) return NextResponse.json({ error: "Contact not found" }, { status: 404 });
+    }
+    // Stage gate — guard central (ponytail: 1 lugar, não em cada caller)
+    if (parsed.data.stage && parsed.data.stage !== current.stage) {
+      const merged = { ...current, ...parsed.data } as Record<string, unknown>;
+      let discoveryHealth: number | undefined;
+      if (parsed.data.stage === "PROPOSAL") {
+        const fields = await prisma.discoveryField.findMany({ where: { dealId: id }, select: { key:true, status:true } });
+        discoveryHealth = computeHealth(fields);
+      }
+      const gate = validateStageGate(parsed.data.stage, merged as never, { discoveryHealth });
+      if (!gate.ok) return NextResponse.json({ error: gate.message }, { status: 400 });
     }
     const updated = await prisma.deal.update({ where: { id }, data: parsed.data as never });
     await auditLog({ organizationId, userId, action: "deal.updated", entityType: "Deal", entityId: id, metadata: { fields: Object.keys(parsed.data) } });

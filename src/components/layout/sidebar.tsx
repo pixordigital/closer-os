@@ -4,10 +4,11 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/components/i18n/provider";
 import {
-  LayoutDashboard, Kanban, Building2, Users, Phone, Theater, Compass, GraduationCap, Calculator, CheckSquare, Bot, Settings, LogOut, Webhook, Workflow, ListTree, Plug, Radio, ShieldAlert, Sparkles,
+  LayoutDashboard, Kanban, Building2, Users, Phone, Theater, Compass, GraduationCap, Calculator, CheckSquare, Bot, Settings, LogOut, Webhook, Workflow, ListTree, Plug, Radio, ShieldAlert, Sparkles, Sun, BarChart3,
 } from "lucide-react";
 
 const NAV_KEYS = [
+  { href: "/today", key: "nav.today", icon: Sun },
   { href: "/dashboard", key: "nav.dashboard", icon: LayoutDashboard },
   { href: "/pipeline", key: "nav.pipeline", icon: Kanban },
   { href: "/companies", key: "nav.companies", icon: Building2 },
@@ -20,6 +21,7 @@ const NAV_KEYS = [
   { href: "/coaching", key: "nav.coaching", icon: GraduationCap },
   { href: "/roi", key: "nav.roi", icon: Calculator },
   { href: "/tasks", key: "nav.tasks", icon: CheckSquare },
+  { href: "/reports", key: "nav.reports", icon: BarChart3 },
   { href: "/agents", key: "nav.agents", icon: Sparkles },
   { href: "/command", key: "nav.command", icon: Bot },
   { href: "/webhooks", key: "nav.webhooks", icon: Webhook },

@@ -56,6 +56,7 @@ export default async function DealDetailPage({ params }: { params: Promise<{ id:
           </div>
         </div>
         <div className="flex gap-2">
+          <Link href={`/deals/${deal.id}/proposal`}><Button size="sm">Proposta</Button></Link>
           <Link href={`/deals/${deal.id}/edit`}><Button variant="outline" size="sm">Editar</Button></Link>
           <Link href={`/pipeline`}><Button variant="ghost" size="sm">← Pipeline</Button></Link>
         </div>

@@ -57,6 +57,10 @@ export const dealCreateSchema = z.object({
 });
 export const dealUpdateSchema = dealCreateSchema.partial().extend({
   companyId: z.string().cuid().optional(),
+}).superRefine((data, ctx) => {
+  if (data.stage === "LOST" && (!data.lostReason || !data.lostReason.trim())) {
+    ctx.addIssue({ code: "custom", path: ["lostReason"], message: "Motivo da perda obrigatório ao mover para LOST" });
+  }
 });
 export type DealCreateInput = z.infer<typeof dealCreateSchema>;
 

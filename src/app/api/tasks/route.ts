@@ -10,10 +10,21 @@ export async function GET(req: Request) {
   const { page, limit, skip, q } = parsePagination(url);
   const status = url.searchParams.get("status")?.trim().toUpperCase() || undefined;
   const dealId = url.searchParams.get("dealId")?.trim() || undefined;
+  const due = url.searchParams.get("due")?.trim().toLowerCase();
+  const dueFilter: Record<string, unknown> = {};
+  if (due === "overdue") {
+    const start = new Date(); start.setHours(0,0,0,0);
+    dueFilter.dueDate = { lt: start };
+    (dueFilter as Record<string, unknown>).status = { in: ["TODO","IN_PROGRESS"] };
+  } else if (due === "today") {
+    const s = new Date(); s.setHours(0,0,0,0); const e = new Date(); e.setHours(23,59,59,999);
+    dueFilter.dueDate = { gte: s, lte: e };
+  }
   const where: Record<string, unknown> = {
     organizationId,
     ...(status ? { status } : {}),
     ...(dealId ? { dealId } : {}),
+    ...dueFilter,
     ...(q ? { title: { contains: q, mode: "insensitive" } } : {}),
   };
   const [items, total] = await Promise.all([

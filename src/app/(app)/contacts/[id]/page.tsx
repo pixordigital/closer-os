@@ -18,7 +18,9 @@ export default async function ContactDetailPage({ params }: { params: Promise<{ 
       <div className="flex items-start justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">{contact.name}</h1>
-          <p className="mt-1 text-sm text-zinc-400">{[contact.role, contact.email, contact.phone].filter(Boolean).join(" · ")||"—"}</p>
+          <p className="mt-1 text-sm text-zinc-400">
+            {[contact.role, contact.email].filter(Boolean).join(" · ")}{contact.phone ? <> · <a href={`tel:${contact.phone.replace(/\s/g,"")}`} className="text-sky-400 hover:underline">{contact.phone}</a> <a href={`tel:${contact.phone.replace(/\s/g,"")}`} className="ml-2 inline-flex h-6 items-center rounded bg-emerald-600 px-2 text-xs font-medium text-white">Ligar</a></> : ""}{!contact.role && !contact.email && !contact.phone ? "—" : ""}
+          </p>
           <div className="mt-2 flex gap-2"><Badge>{contact.decisionRole}</Badge><Link href={`/companies/${contact.company.id}`} className="text-sm text-sky-400 hover:underline">{contact.company.name}</Link></div>
         </div>
         <Link href={`/contacts/${contact.id}/edit`}><Button variant="outline" size="sm">Editar</Button></Link>

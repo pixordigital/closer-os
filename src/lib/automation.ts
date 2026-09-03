@@ -10,6 +10,9 @@ export const AUTOMATION_TRIGGERS = [
   "call.created",
   "deal.created",
   "deal.updated",
+  "deal.stale",
+  "deal.stage_changed",
+  "task.overdue",
   "roleplay.completed",
   "followup.approved",
 ] as const;

@@ -4,6 +4,7 @@ import { requireTenant } from "@/lib/tenant";
 import { prisma } from "@/lib/db";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Timeline } from "@/components/companies/timeline";
 
 export default async function CompanyDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -66,6 +67,12 @@ export default async function CompanyDetailPage({ params }: { params: Promise<{ 
           </div>
         </section>
       </div>
+
+      <section className="mt-6 rounded-xl border border-zinc-800 bg-zinc-900 p-4">
+        <h2 className="font-medium">Timeline</h2>
+        <p className="text-xs text-zinc-500">Histórico unificado: deals, calls, tasks, follow-ups, contatos.</p>
+        <div className="mt-3"><Timeline companyId={company.id} /></div>
+      </section>
     </div>
   );
 }

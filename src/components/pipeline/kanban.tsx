@@ -37,15 +37,23 @@ export function Kanban({ initialDeals }: { initialDeals: Deal[] }) {
   const router = useRouter();
 
   async function moveStage(id:string, stage:string) {
-    setDeals(prev => prev.map(d => d.id===id ? {...d, stage}: d));
+    let body: Record<string,string> = { stage };
+    if (stage === "LOST") {
+      const reason = window.prompt("Motivo da perda (obrigatório para LOST):");
+      if (!reason || !reason.trim()) { alert("LOST exige motivo da perda."); return; }
+      body.lostReason = reason.trim();
+    }
+    const prev = deals;
+    setDeals(p => p.map(d => d.id===id ? {...d, stage}: d));
     const res = await fetch(`/api/deals/${id}`, {
       method:"PATCH", headers:{"Content-Type":"application/json"},
-      body: JSON.stringify({ stage }),
+      body: JSON.stringify(body),
     });
     if(!res.ok) {
-      const j = await res.json().catch(()=>({}));
-      alert(j.error ?? "Falha ao mover deal");
-      setDeals(initialDeals);
+      const j = await res.json().catch(()=>({}) as {error?:string});
+      const msg = typeof j.error === "string" ? j.error : (j as {error?:{formErrors?:string[]}})?.error?.formErrors?.join("; ") ?? "Falha ao mover deal";
+      alert(msg);
+      setDeals(prev);
       return;
     }
     startTransition(()=> router.refresh());
