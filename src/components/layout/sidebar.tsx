@@ -13,7 +13,7 @@ const NAV_KEYS = [
   { href: "/companies", key: "nav.companies", icon: Building2 },
   { href: "/contacts", key: "nav.contacts", icon: Users },
   { href: "/calls", key: "nav.calls", icon: Phone },
-  { href: "/live", key: "nav.live", icon: Radio },
+  { href: "/live", key: "nav.live", icon: Radio, disabled: true },
   { href: "/objections", key: "nav.objections", icon: ShieldAlert },
   { href: "/roleplay", key: "nav.roleplay", icon: Theater },
   { href: "/discovery", key: "nav.discovery", icon: Compass },
@@ -38,9 +38,20 @@ export function Sidebar() {
         <span className="rounded bg-zinc-800 px-1.5 py-0.5 text-[10px] text-zinc-400">v0.1</span>
       </div>
       <nav className="flex flex-1 flex-col gap-0.5 p-2">
-        {NAV_KEYS.map(({ href, key, icon: Icon }) => {
+        {(NAV_KEYS as Array<{href:string,key:string,icon:typeof LayoutDashboard,disabled?:boolean}>).map(({ href, key, icon: Icon, disabled }) => {
           const label = t(key);
           const active = pathname === href || pathname.startsWith(href + "/");
+          if(disabled){
+            return (
+              <span
+                key={href}
+                className="flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm text-zinc-600/60 cursor-not-allowed select-none"
+                title="Desativado — use a extensão Chrome (Settings → Extensão)"
+              >
+                <Icon className="h-4 w-4 shrink-0 opacity-50" />{label} <span className="ml-auto text-[10px] border border-zinc-800 rounded px-1">em breve</span>
+              </span>
+            );
+          }
           return (
             <Link
               key={href}
