@@ -19,7 +19,7 @@ function LoginForm() {
     setErr(null);
     setLoading(true);
     const fd = new FormData(e.currentTarget);
-    const body = { email: fd.get("email"), password: fd.get("password") };
+    const body = { email: fd.get("email"), password: fd.get("password"), remember: fd.get("remember")==="on" };
     const res = await fetch("/api/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -41,6 +41,10 @@ function LoginForm() {
       <div className="space-y-2">
         <Label htmlFor="password">Senha</Label>
         <Input id="password" name="password" type="password" required autoComplete="current-password" />
+      </div>
+      <div className="flex items-center gap-2">
+        <input id="remember" name="remember" type="checkbox" defaultChecked className="h-4 w-4 rounded border-zinc-700 bg-zinc-900" />
+        <Label htmlFor="remember" className="text-sm font-normal text-zinc-400">Lembrar de mim — manter logado no app</Label>
       </div>
       {err && <p className="text-sm text-red-400">{err}</p>}
       <Button type="submit" className="w-full" disabled={loading}>{loading ? "Entrando..." : "Entrar"}</Button>

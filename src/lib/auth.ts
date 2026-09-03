@@ -41,14 +41,17 @@ export async function verifySession(token: string): Promise<SessionPayload | nul
   }
 }
 
-export async function setSessionCookie(payload: SessionPayload) {
-  const token = await signSession(payload);
+export async function setSessionCookie(payload: SessionPayload, opts?:{ remember?:boolean }) {
+  const rememberMax = 60*60*24*30;
+  const maxAge = opts?.remember ? rememberMax : MAX_AGE;
+  const token = await new jose.SignJWT(payload as unknown as Record<string, unknown>)
+    .setProtectedHeader({ alg:"HS256" }).setIssuedAt().setExpirationTime(`${maxAge}s`).sign(getSecret());
   const jar = await cookies();
   jar.set(COOKIE, token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production" && (process.env.APP_URL?.startsWith("https://") ?? false),
     sameSite: "lax",
-    maxAge: MAX_AGE,
+    maxAge,
     path: "/",
   });
 }
