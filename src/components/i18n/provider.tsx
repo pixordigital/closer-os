@@ -19,7 +19,7 @@ export function I18nProvider({ children, initial }:{ children:React.ReactNode, i
     setLocaleState(l);
     localStorage.setItem("locale",l);
     document.cookie=`locale=${l}; path=/; max-age=31536000; SameSite=lax`;
-    fetch("/api/settings",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({ locale:l })}).catch(()=>{});
+    fetch("/api/settings",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({ locale:l })}).then(()=>{ window.location.reload(); }).catch(()=>{ window.location.reload(); });
   }
   function t(k:string){ return dicts[locale]?.[k] ?? dicts[defaultLocale][k] ?? k; }
   return <Ctx.Provider value={{ locale, setLocale, t }}>{children}</Ctx.Provider>;

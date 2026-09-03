@@ -37,48 +37,49 @@ export function SettingsForms({ initial }:{ initial:{ user:{id:string,name:strin
     setPwMsg("Senha alterada ✓"); setPw({current:"",next:"",confirm:""});
   }
 
+  const { t } = useI18n();
   return (
     <div className="space-y-4">
       <Card>
-        <CardHeader><CardTitle className="text-sm">Conta</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="text-sm">{t("settings.account")}</CardTitle></CardHeader>
         <CardContent className="space-y-3">
-          <div className="text-xs text-zinc-500">Email: <span className="text-zinc-200">{initial.user.email}</span> · Role: <Badge>{initial.membership.role}</Badge> · Membro desde {new Date(initial.user.createdAt).toLocaleDateString("pt-BR")}</div>
-          <div className="space-y-1.5"><Label>Nome</Label><Input value={userName} onChange={e=>setUserName(e.target.value)} /></div>
-          <Button size="sm" onClick={saveProfile} disabled={loading}>{loading?"Salvando...":"Salvar nome"}</Button>
+          <div className="text-xs text-zinc-500">{t("common.email")}: <span className="text-zinc-200">{initial.user.email}</span> · {t("common.role")}: <Badge>{initial.membership.role}</Badge> · {t("common.memberSince")} {new Date(initial.user.createdAt).toLocaleDateString(locale)}</div>
+          <div className="space-y-1.5"><Label>{t("settings.name")}</Label><Input value={userName} onChange={e=>setUserName(e.target.value)} /></div>
+          <Button size="sm" onClick={saveProfile} disabled={loading}>{loading?t("common.saving"):t("settings.saveName")}</Button>
           {msg && <p className="text-xs text-zinc-400">{msg}</p>}
         </CardContent>
       </Card>
 
       <Card>
-        <CardHeader><CardTitle className="text-sm">Organização</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="text-sm">{t("settings.org")}</CardTitle></CardHeader>
         <CardContent className="space-y-3">
-          <div className="text-xs text-zinc-500">Slug: <span className="text-zinc-200">{initial.org.slug}</span> · {initial.memberCount} membro(s) · Criada {new Date(initial.org.createdAt).toLocaleDateString("pt-BR")}</div>
-          <div className="space-y-1.5"><Label>Nome da organização</Label><Input value={orgName} onChange={e=>setOrgName(e.target.value)} /></div>
-          <Button size="sm" onClick={saveProfile} disabled={loading}>{loading?"Salvando...":"Salvar organização"}</Button>
+          <div className="text-xs text-zinc-500">{t("common.slug")}: <span className="text-zinc-200">{initial.org.slug}</span> · {initial.memberCount} {t("common.members")} · {t("common.created")} {new Date(initial.org.createdAt).toLocaleDateString(locale)}</div>
+          <div className="space-y-1.5"><Label>{t("settings.orgName")}</Label><Input value={orgName} onChange={e=>setOrgName(e.target.value)} /></div>
+          <Button size="sm" onClick={saveProfile} disabled={loading}>{loading?t("common.saving"):t("settings.saveOrg")}</Button>
         </CardContent>
       </Card>
 
       <Card>
-        <CardHeader><CardTitle className="text-sm">Segurança — trocar senha</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="text-sm">{t("settings.security")}</CardTitle></CardHeader>
         <CardContent className="space-y-3">
-          <div className="space-y-1.5"><Label>Senha atual</Label><Input type="password" value={pw.current} onChange={e=>setPw({...pw,current:e.target.value})} /></div>
-          <div className="space-y-1.5"><Label>Nova senha</Label><Input type="password" value={pw.next} onChange={e=>setPw({...pw,next:e.target.value})} /></div>
-          <div className="space-y-1.5"><Label>Confirmar nova senha</Label><Input type="password" value={pw.confirm} onChange={e=>setPw({...pw,confirm:e.target.value})} /></div>
-          <Button size="sm" onClick={changePw} disabled={pwLoading}>{pwLoading?"Alterando...":"Alterar senha"}</Button>
+          <div className="space-y-1.5"><Label>{t("settings.currentPw")}</Label><Input type="password" value={pw.current} onChange={e=>setPw({...pw,current:e.target.value})} /></div>
+          <div className="space-y-1.5"><Label>{t("settings.newPw")}</Label><Input type="password" value={pw.next} onChange={e=>setPw({...pw,next:e.target.value})} /></div>
+          <div className="space-y-1.5"><Label>{t("settings.confirmPw")}</Label><Input type="password" value={pw.confirm} onChange={e=>setPw({...pw,confirm:e.target.value})} /></div>
+          <Button size="sm" onClick={changePw} disabled={pwLoading}>{pwLoading?t("common.saving"):t("settings.changePw")}</Button>
           {pwMsg && <p className="text-xs text-zinc-400">{pwMsg}</p>}
         </CardContent>
       </Card>
 
       <Card>
-        <CardHeader><CardTitle className="text-sm">Idioma / Language</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="text-sm">{t("settings.language")}</CardTitle></CardHeader>
         <CardContent className="space-y-3">
-          <div className="space-y-1.5"><Label>Escolha / Choose</Label>
+          <div className="space-y-1.5"><Label>{t("settings.language")}</Label>
             <select value={locale} onChange={e=>setLocale(e.target.value as Locale)} className="h-9 w-full rounded-md border border-zinc-800 bg-zinc-900 px-3 text-sm">
               <option value="pt-BR">Português (BR)</option>
               <option value="en">English</option>
             </select>
           </div>
-          <p className="text-xs text-zinc-500">Salvo automaticamente no perfil e cookie. / Auto-saved to profile and cookie.</p>
+          <p className="text-xs text-zinc-500">{t("settings.language.desc")}</p>
         </CardContent>
       </Card>
 
