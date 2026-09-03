@@ -46,3 +46,6 @@ next-env.d.ts
 
 # Claude local
 .claude/
+android/
+ios/
+out/

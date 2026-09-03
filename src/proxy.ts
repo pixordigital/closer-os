@@ -7,6 +7,7 @@ const PUBLIC = [
   "/register",
   "/extension",
   "/extension.zip",
+  "/downloads",
   "/manifest.json",
   "/api/auth/login",
   "/api/auth/register",

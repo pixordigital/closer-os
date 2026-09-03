@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { useI18n } from "@/components/i18n/provider";
 import type { Locale } from "@/lib/i18n";
 import { AISettings } from "@/components/settings/ai-settings";
+import { MobileApps } from "@/components/settings/mobile-apps";
 
 export function SettingsForms({ initial }:{ initial:{ user:{id:string,name:string,email:string,createdAt:Date,locale?:string}, org:{id:string,name:string,slug:string,createdAt:Date}, membership:{role:string}, memberCount:number, email:string } }){
   const { locale, setLocale } = useI18n();
@@ -85,6 +86,8 @@ export function SettingsForms({ initial }:{ initial:{ user:{id:string,name:strin
       </Card>
 
       <AISettings />
+
+      <MobileApps />
 
       <Card>
         <CardHeader><CardTitle className="text-sm">Extensão Chrome — Meet 100% + Live Coach</CardTitle></CardHeader>
