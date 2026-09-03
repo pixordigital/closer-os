@@ -87,6 +87,23 @@ export function SettingsForms({ initial }:{ initial:{ user:{id:string,name:strin
       <AISettings />
 
       <Card>
+        <CardHeader><CardTitle className="text-sm">Extensão Chrome — Meet 100% + Live Coach</CardTitle></CardHeader>
+        <CardContent className="space-y-3">
+          <p className="text-xs text-zinc-400">Instale pra ter Meet com 100% dos controles + Live Coach na mesma tela (sem trocar de aba, invisível ao prospect — Granola-style).</p>
+          <div className="flex gap-2">
+            <a href="/extension.zip" download className="inline-flex h-9 items-center rounded-md bg-emerald-600 px-4 text-sm font-medium text-white hover:bg-emerald-700">Baixar extensão (.zip)</a>
+            <a href="/extension/manifest.json" target="_blank" className="inline-flex h-9 items-center rounded-md border border-zinc-800 bg-zinc-900 px-4 text-sm text-zinc-200">Ver manifest</a>
+          </div>
+          <ol className="list-decimal pl-4 text-xs text-zinc-500 space-y-1">
+            <li>Baixe o zip e descompacte</li>
+            <li>Chrome → <code>chrome://extensions</code> → ative Modo desenvolvedor → Carregar sem compactação → selecione pasta <code>extension</code></li>
+            <li>Abra <code>meet.google.com</code> — botão <b>◉ Closer Coach</b> aparece no canto</li>
+          </ol>
+          <p className="text-xs text-zinc-600">Também disponível em <code>/extension/</code> — sem precisar procurar.</p>
+        </CardContent>
+      </Card>
+
+      <Card>
         <CardHeader><CardTitle className="text-sm">Sistema</CardTitle></CardHeader>
         <CardContent className="text-xs text-zinc-500 space-y-1">
           <div>App: Closer OS v0.1 — Next.js 16 · Prisma 6 · PostgreSQL</div>

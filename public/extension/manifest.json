@@ -1,0 +1,18 @@
+{
+  "manifest_version": 3,
+  "name": "Closer OS — Live Coach",
+  "version": "0.1.0",
+  "description": "Meet/Zoom 100% + Live Coach na mesma tela (Granola-style, invisível)",
+  "permissions": ["storage"],
+  "host_permissions": ["https://meet.google.com/*", "https://*.zoom.us/*", "https://*.zoom.com/*", "https://178.105.181.38:6002/*", "http://178.105.181.38:6002/*"],
+  "content_scripts": [
+    {
+      "matches": ["https://meet.google.com/*", "https://*.zoom.us/*", "https://*.zoom.com/*"],
+      "js": ["content.js"],
+      "css": ["content.css"],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": { "default_title": "Closer Coach", "default_popup": "popup.html" },
+  "icons": { "128": "icon.png" }
+}
