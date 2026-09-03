@@ -119,9 +119,9 @@ export default async function Home(){
 
       <section id="novidades">
         <div className="inner">
-          <div className="label">Novidades da versão</div>
-          <h2 className="title">O que mudou desde o 8777</h2>
-          <p className="desc">Home 100% nova — cor, layout e texto — refletindo tudo que entrou nas últimas sprints.</p>
+          <div className="label">Novidades</div>
+          <h2 className="title">Tudo que seu time precisava</h2>
+          <p className="desc">As últimas entregas que deixam o closer mais rápido, invisível e autônomo.</p>
           <div className="bento">
             <div className="bento-card large"><div className="icon">📱</div><h3>Apps Android & iOS</h3><p>APK real 4MB buildado (Gradle), PWA instalável e IPA via TestFlight. Mobile-first com drawer, bottom nav e <b>/mobile-live</b> 30% Coach + 70% Meet em WebView nativo.</p><p style={{marginTop:"12px",fontSize:"12px",color:"var(--accent2)"}}>Settings → Apps Mobile → Baixar</p></div>
             <div className="bento-card"><div className="icon">👻</div><h3>Stealth Granola</h3><p>Captura invisível via getDisplayMedia → Whisper, sem bot na call. Pós-call auto-feed com HITL em /agents.</p></div>
