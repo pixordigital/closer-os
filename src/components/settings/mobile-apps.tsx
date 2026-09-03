@@ -9,10 +9,13 @@ export function MobileApps(){
       <CardContent className="space-y-4">
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="rounded-lg border border-zinc-800 bg-zinc-950 p-4">
-            <div className="flex items-center gap-2"><span className="text-lg">🤖</span><span className="text-sm font-medium">Android</span><Badge>APK assinado v1</Badge><Badge>release</Badge></div>
-            <p className="mt-1 text-xs text-zinc-500">APK release assinado (v2) — Play Protect não flagará como malware. Se mostrar "Fonte desconhecida", toque <b>Permitir</b> → Instalar. Distribuição via Play Internal Testing remove o aviso 100%.</p>
-            <a href="/downloads/closer.apk" download className="mt-3 inline-flex h-9 items-center rounded-md bg-emerald-600 px-4 text-sm font-medium text-white hover:bg-emerald-700">Baixar APK assinado</a>
-            <p className="mt-2 text-[11px] text-zinc-600">3.1MB • assinado • Ou PWA: Chrome → ⋮ → Instalar app</p>
+            <div className="flex items-center gap-2"><span className="text-lg">🤖</span><span className="text-sm font-medium">Android</span><Badge>APK assinado v1</Badge><Badge>release</Badge><Badge>100% nativo</Badge></div>
+            <p className="mt-1 text-xs text-zinc-500">Híbrido WebView (3.1MB) + <b>Nativo Kotlin Compose</b> (9.1MB) — sem WebView, buildado pra arm64. Play Protect ok.</p>
+            <div className="flex gap-2 mt-3">
+              <a href="/downloads/closer.apk" download className="inline-flex h-9 items-center rounded-md bg-emerald-600 px-4 text-sm font-medium text-white hover:bg-emerald-700">Baixar Híbrido</a>
+              <a href="/downloads/closer-native.apk" download className="inline-flex h-9 items-center rounded-md bg-violet-600 px-4 text-sm font-medium text-white hover:bg-violet-700">Baixar Nativo Kotlin</a>
+            </div>
+            <p className="mt-2 text-[11px] text-zinc-600">Nativo: Compose + Retrofit, sem WebView • PWA também funciona</p>
           </div>
           <div className="rounded-lg border border-zinc-800 bg-zinc-950 p-4">
             <div className="flex items-center gap-2"><span className="text-lg">🍎</span><span className="text-sm font-medium">iOS</span><Badge>IPA</Badge><Badge>TestFlight</Badge></div>

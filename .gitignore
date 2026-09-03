@@ -50,3 +50,5 @@ android/
 ios/
 out/
 android/app/closer-release.keystore
+android-native/build
+android-native/.gradle
