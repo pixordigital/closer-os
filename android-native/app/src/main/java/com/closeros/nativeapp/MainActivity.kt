@@ -68,7 +68,10 @@ class MainActivity : ComponentActivity() {
         Button(onClick={
             loading=true; err=null
             scope.launch{
-                try{ Api.service.login(LoginReq(email,pass,remember)); loading=false; onLogin() }catch(e:Exception){ loading=false; err=e.message?.take(120) ?: "Falha login"}
+                try{
+                    val r=Api.service.login(LoginReq(email,pass,remember))
+                    if(r.isSuccessful) { loading=false; onLogin() } else { loading=false; err="Credenciais inválidas" }
+                }catch(e:Exception){ loading=false; err=e.message?.take(120) ?: "Falha login"}
             }
         }, modifier=Modifier.fillMaxWidth(), colors=ButtonDefaults.buttonColors(containerColor=Accent, contentColor=Color.Black), enabled=!loading){ Text(if(loading) "Entrando..." else "Entrar") }
         Text("Web: 178.105.181.38:6002", color=TextDim, fontSize=11.sp, modifier=Modifier.padding(top=12.dp))
@@ -94,9 +97,9 @@ class MainActivity : ComponentActivity() {
         Box(Modifier.padding(pad)){
             NavHost(navController=nav, startDestination="dashboard"){
                 composable("dashboard"){ DashboardNative() }
-                composable("pipeline"){ Placeholder("Pipeline Kanban — nativo em breve") }
-                composable("calls"){ Placeholder("Calls — nativo em breve (Live 30/70 já no /mobile-live)") }
-                composable("tasks"){ Placeholder("Tasks — nativo em breve") }
+                composable("pipeline"){ PipelineNative() }
+                composable("calls"){ CallsNative() }
+                composable("tasks"){ TasksNative() }
                 composable("settings"){ Column(Modifier.padding(16.dp)){ Text("Settings", color=Color.White); Button(onClick=onLogout, modifier=Modifier.padding(top=12.dp)){ Text("Sair") } } }
             }
         }
@@ -104,23 +107,61 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable fun DashboardNative(){
+    var deals by remember { mutableStateOf<List<Deal>>(emptyList()) }
+    var calls by remember { mutableStateOf<List<Call>>(emptyList()) }
+    LaunchedEffect(Unit){
+        try{ deals = Api.service.deals().items }catch(_:Exception){}
+        try{ calls = Api.service.calls().items }catch(_:Exception){}
+    }
     LazyColumn(Modifier.fillMaxSize().background(Bg).padding(16.dp), verticalArrangement=Arrangement.spacedBy(12.dp)){
-        item{ Text("Dashboard", color=Color.White, style=MaterialTheme.typography.titleLarge); Text("Visão geral do seu pipeline", color=TextDim, fontSize=13.sp) }
+        item{ Text("Dashboard", color=Color.White, style=MaterialTheme.typography.titleLarge); Text("Visão geral do seu pipeline — nativo", color=TextDim, fontSize=13.sp) }
         item{
             Row(Modifier.fillMaxWidth(), horizontalArrangement=Arrangement.spacedBy(12.dp)){
-                KpiCard("Pipeline","R$ 0","0 deals", Modifier.weight(1f))
-                KpiCard("Forecast","R$ 0","weighted", Modifier.weight(1f))
+                KpiCard("Pipeline","${deals.size} deals","total", Modifier.weight(1f))
+                KpiCard("Calls","${calls.size}","gravadas", Modifier.weight(1f))
             }
         }
-        item{
-            Row(Modifier.fillMaxWidth(), horizontalArrangement=Arrangement.spacedBy(12.dp)){
-                KpiCard("Empresas","0","ativas", Modifier.weight(1f))
-                KpiCard("Calls","0","gravadas", Modifier.weight(1f))
+        item{ Card(colors=CardDefaults.cardColors(containerColor=Surface), shape=RoundedCornerShape(12.dp), modifier=Modifier.fillMaxWidth()){ Column(Modifier.padding(16.dp)){ Text("Pipeline por estágio", color=Color.White); Text(deals.groupBy{it.stage}.entries.joinToString(" • "){"${it.key} ${it.value.size}"}.ifEmpty{"Nenhum deal"}, color=TextDim, fontSize=12.sp, modifier=Modifier.padding(top=8.dp)) } } }
+        item{ Card(colors=CardDefaults.cardColors(containerColor=Surface), shape=RoundedCornerShape(12.dp), modifier=Modifier.fillMaxWidth()){ Column(Modifier.padding(16.dp)){ Text("Deals recentes", color=Color.White); if(deals.isEmpty()) Text("Nenhum deal ainda", color=TextDim, fontSize=12.sp) else deals.take(5).forEach{ Text("• ${it.name} [${it.stage}]", color=Color.White, fontSize=12.sp) } } } }
+        item{ Text("Portado do web: mesma paleta zinc-950, sem WebView", color=TextDim, fontSize=11.sp) }
+    }
+}
+@Composable fun PipelineNative(){
+    var deals by remember { mutableStateOf<List<Deal>>(emptyList()) }
+    LaunchedEffect(Unit){ try{ deals=Api.service.deals().items }catch(_:Exception){} }
+    val stages=listOf("LEAD","QUALIFIED","DISCOVERY","SOLUTION","PROPOSAL","NEGOTIATION","WON","LOST")
+    LazyColumn(Modifier.fillMaxSize().background(Bg).padding(16.dp), verticalArrangement=Arrangement.spacedBy(12.dp)){
+        item{ Text("Pipeline Kanban — nativo", color=Color.White, style=MaterialTheme.typography.titleLarge); Text("Mesmo pipeline do web, com health e drag (em breve)", color=TextDim, fontSize=12.sp) }
+        stages.forEach{ st->
+            val list=deals.filter{it.stage==st}
+            item{
+                Card(colors=CardDefaults.cardColors(containerColor=Surface), shape=RoundedCornerShape(12.dp), modifier=Modifier.fillMaxWidth()){
+                    Column(Modifier.padding(12.dp)){
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement=Arrangement.SpaceBetween){ Text(st, color=Color.White, fontSize=12.sp); Text("${list.size}", color=TextDim, fontSize=12.sp) }
+                        if(list.isEmpty()) Text("—", color=TextDim, fontSize=11.sp, modifier=Modifier.padding(top=6.dp))
+                        else list.take(3).forEach{ Text("• ${it.name}", color=Color.White, fontSize=11.sp, modifier=Modifier.padding(top=4.dp)) }
+                    }
+                }
             }
         }
-        item{ Card(colors=CardDefaults.cardColors(containerColor=Surface), shape=RoundedCornerShape(12.dp), modifier=Modifier.fillMaxWidth()){ Column(Modifier.padding(16.dp)){ Text("Pipeline por estágio", color=Color.White); Text("LEAD 0  •  QUALIFIED 0  •  DISCOVERY 0", color=TextDim, fontSize=12.sp, modifier=Modifier.padding(top=8.dp)) } } }
-        item{ Card(colors=CardDefaults.cardColors(containerColor=Surface), shape=RoundedCornerShape(12.dp), modifier=Modifier.fillMaxWidth()){ Column(Modifier.padding(16.dp)){ Text("Deals recentes", color=Color.White); Text("Nenhum deal ainda — crie no +", color=TextDim, fontSize=12.sp) } } }
-        item{ Text("Portado do web: mesma paleta zinc-950, cards zinc-900, borda zinc-800, sem WebView", color=TextDim, fontSize=11.sp) }
+    }
+}
+@Composable fun CallsNative(){
+    var calls by remember { mutableStateOf<List<Call>>(emptyList()) }
+    LaunchedEffect(Unit){ try{ calls=Api.service.calls().items }catch(_:Exception){} }
+    LazyColumn(Modifier.fillMaxSize().background(Bg).padding(16.dp), verticalArrangement=Arrangement.spacedBy(8.dp)){
+        item{ Text("Calls", color=Color.White, style=MaterialTheme.typography.titleLarge); Text("Transcrição + Live 30/70 no /mobile-live", color=TextDim, fontSize=12.sp) }
+        if(calls.isEmpty()) item{ Text("Nenhuma call — crie no +", color=TextDim, fontSize=12.sp) }
+        items(calls.size){ i-> val c=calls[i]; Card(colors=CardDefaults.cardColors(containerColor=Surface), shape=RoundedCornerShape(10.dp), modifier=Modifier.fillMaxWidth()){ Column(Modifier.padding(12.dp)){ Text(c.title, color=Color.White, fontSize=13.sp); Text(c.status, color=TextDim, fontSize=11.sp) } } }
+    }
+}
+@Composable fun TasksNative(){
+    var tasks by remember { mutableStateOf<List<TaskItem>>(emptyList()) }
+    LaunchedEffect(Unit){ try{ tasks=Api.service.tasks().items }catch(_:Exception){} }
+    LazyColumn(Modifier.fillMaxSize().background(Bg).padding(16.dp), verticalArrangement=Arrangement.spacedBy(8.dp)){
+        item{ Text("Tasks", color=Color.White, style=MaterialTheme.typography.titleLarge) }
+        if(tasks.isEmpty()) item{ Text("Nenhuma task", color=TextDim, fontSize=12.sp) }
+        items(tasks.size){ i-> val t=tasks[i]; Card(colors=CardDefaults.cardColors(containerColor=Surface), shape=RoundedCornerShape(10.dp), modifier=Modifier.fillMaxWidth()){ Row(Modifier.padding(12.dp).fillMaxWidth(), horizontalArrangement=Arrangement.SpaceBetween){ Text(t.title, color=Color.White, fontSize=13.sp); Text(t.status, color=Accent, fontSize=11.sp) } } }
     }
 }
 @Composable fun KpiCard(title:String, value:String, sub:String, modifier:Modifier=Modifier){
@@ -128,4 +169,3 @@ class MainActivity : ComponentActivity() {
         Column(Modifier.padding(16.dp)){ Text(title, color=TextDim, fontSize=11.sp); Text(value, color=Color.White, fontSize=20.sp); Text(sub, color=TextDim, fontSize=11.sp) }
     }
 }
-@Composable fun Placeholder(t:String){ Box(Modifier.fillMaxSize().background(Bg).padding(24.dp), contentAlignment=Alignment.Center){ Text(t, color=TextDim) } }
