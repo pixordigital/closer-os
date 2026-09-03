@@ -82,25 +82,82 @@ class MainActivity : ComponentActivity() {
 @Composable fun MainScaffold(onLogout:()->Unit){
     val nav=rememberNavController()
     var selected by remember { mutableStateOf(0) }
-    val items=listOf("Dashboard" to "dashboard","Pipeline" to "pipeline","Calls" to "calls","Tasks" to "tasks","Settings" to "settings")
-    Scaffold(
-        topBar={ CenterAlignedTopAppBar(title={ Text("CLOSER OS", color=Color.White)} , colors=TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor=Surface)) },
-        bottomBar={
-            NavigationBar(containerColor=Surface){
-                items.forEachIndexed{i,(label,route)->
-                    NavigationBarItem(selected=selected==i, onClick={selected=i; nav.navigate(route)}, icon={Text(when(i){0->"🏠" 1->"📊" 2->"📞" 3->"✅" else->"⚙️"})}, label={Text(label, fontSize=10.sp)})
+    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
+    val scope = rememberCoroutineScope()
+    val bottomItems = listOf("Dashboard" to "dashboard","Pipeline" to "pipeline","Calls" to "calls","Tasks" to "tasks","Mais" to "more")
+    val allItems = listOf(
+        "Dashboard" to "dashboard","Pipeline" to "pipeline","Empresas" to "companies","Contatos" to "contacts","Calls" to "calls","Live Coach" to "live","Objeções" to "objections","Roleplay" to "roleplay","Discovery" to "discovery","Coaching" to "coaching","ROI" to "roi","Tasks" to "tasks","Agentes" to "agents","Command" to "command","Webhooks" to "webhooks","Automations" to "automations","Jobs" to "jobs","Integrações" to "integrations","Settings" to "settings"
+    )
+    ModalNavigationDrawer(
+        drawerState = drawerState,
+        drawerContent = {
+            ModalDrawerSheet(drawerContainerColor = Surface){
+                Column(Modifier.padding(16.dp)){
+                    Row(verticalAlignment=Alignment.CenterVertically){ Box(Modifier.size(28.dp).background(Accent, RoundedCornerShape(8.dp)), contentAlignment=Alignment.Center){ Text("C", color=Color.Black)}; Spacer(Modifier.width(8.dp)); Text("CLOSER OS", color=Color.White) }
+                    Spacer(Modifier.height(16.dp))
+                    allItems.forEach{ (label,route) ->
+                        val isLive = route=="live"
+                        NavigationDrawerItem(
+                            label={ Text(label, color=if(isLive) TextDim else Color.White, fontSize=13.sp) },
+                            selected=false,
+                            onClick={
+                                scope.launch{ drawerState.close() }
+                                if(isLive) return@NavigationDrawerItem
+                                selected = bottomItems.indexOfFirst{ it.second==route }.let{ if(it==-1) 4 else it }
+                                nav.navigate(route)
+                            },
+                            modifier=Modifier.padding(vertical=1.dp),
+                            colors=NavigationDrawerItemDefaults.colors(unselectedContainerColor=if(isLive) Color(0xFF1A1A1A) else Surface)
+                        )
+                    }
+                    Spacer(Modifier.height(12.dp))
+                    Button(onClick=onLogout, modifier=Modifier.fillMaxWidth(), colors=ButtonDefaults.buttonColors(containerColor=Border)){ Text("Sair") }
                 }
             }
-        },
-        containerColor=Bg
-    ){ pad->
-        Box(Modifier.padding(pad)){
-            NavHost(navController=nav, startDestination="dashboard"){
-                composable("dashboard"){ DashboardNative() }
-                composable("pipeline"){ PipelineNative() }
-                composable("calls"){ CallsNative() }
-                composable("tasks"){ TasksNative() }
-                composable("settings"){ Column(Modifier.padding(16.dp)){ Text("Settings", color=Color.White); Button(onClick=onLogout, modifier=Modifier.padding(top=12.dp)){ Text("Sair") } } }
+        }
+    ){
+        Scaffold(
+            topBar={
+                CenterAlignedTopAppBar(
+                    title={ Text("CLOSER OS", color=Color.White)},
+                    navigationIcon={ IconButton(onClick={ scope.launch{ drawerState.open() }}){ Text("☰", color=Color.White) } },
+                    colors=TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor=Surface)
+                )
+            },
+            bottomBar={
+                NavigationBar(containerColor=Surface){
+                    bottomItems.forEachIndexed{i,(label,route)->
+                        NavigationBarItem(selected=selected==i, onClick={
+                            if(route=="more"){ scope.launch{ drawerState.open() }; return@NavigationBarItem }
+                            selected=i; nav.navigate(route)
+                        }, icon={Text(when(i){0->"🏠" 1->"📊" 2->"📞" 3->"✅" else->"⋯"})}, label={Text(label, fontSize=10.sp)})
+                    }
+                }
+            },
+            containerColor=Bg
+        ){ pad->
+            Box(Modifier.padding(pad)){
+                NavHost(navController=nav, startDestination="dashboard"){
+                    composable("dashboard"){ DashboardNative() }
+                    composable("pipeline"){ PipelineNative() }
+                    composable("companies"){ SimpleListNative("Empresas","/api/companies") }
+                    composable("contacts"){ SimpleListNative("Contatos","/api/contacts") }
+                    composable("calls"){ CallsNative() }
+                    composable("live"){ Placeholder("Live Coach — use extensão Chrome no desktop ou /mobile-live no app. Menu desabilitado pra não confundir.") }
+                    composable("objections"){ SimpleListNative("Objeções","/api/objections") }
+                    composable("roleplay"){ Placeholder("Roleplay — 12 personas, BOSS") }
+                    composable("discovery"){ Placeholder("Discovery — health score") }
+                    composable("coaching"){ Placeholder("Coaching — skills e training") }
+                    composable("roi"){ Placeholder("ROI — 3 cenários") }
+                    composable("tasks"){ TasksNative() }
+                    composable("agents"){ Placeholder("Agentes autônomos — fila HITL") }
+                    composable("command"){ Placeholder("Command — pergunte aos dados") }
+                    composable("webhooks"){ Placeholder("Webhooks") }
+                    composable("automations"){ Placeholder("Automations") }
+                    composable("jobs"){ Placeholder("Jobs queue") }
+                    composable("integrations"){ Placeholder("Integrações — Calendar, Evolution") }
+                    composable("settings"){ Column(Modifier.padding(16.dp)){ Text("Settings", color=Color.White); Button(onClick=onLogout, modifier=Modifier.padding(top=12.dp)){ Text("Sair") } } }
+                }
             }
         }
     }
@@ -169,3 +226,10 @@ class MainActivity : ComponentActivity() {
         Column(Modifier.padding(16.dp)){ Text(title, color=TextDim, fontSize=11.sp); Text(value, color=Color.White, fontSize=20.sp); Text(sub, color=TextDim, fontSize=11.sp) }
     }
 }
+@Composable fun SimpleListNative(title:String, endpoint:String){
+    LazyColumn(Modifier.fillMaxSize().background(Bg).padding(16.dp), verticalArrangement=Arrangement.spacedBy(8.dp)){
+        item{ Text(title, color=Color.White, style=MaterialTheme.typography.titleLarge); Text("Nativo — espelho do web em ${endpoint}", color=TextDim, fontSize=12.sp) }
+        item{ Card(colors=CardDefaults.cardColors(containerColor=Surface), shape=RoundedCornerShape(12.dp), modifier=Modifier.fillMaxWidth()){ Column(Modifier.padding(16.dp)){ Text("Em breve: lista real via ${endpoint}", color=TextDim, fontSize=12.sp); Text("Mesma UI do web, 100% nativo", color=Color.White, fontSize=11.sp) } } }
+    }
+}
+@Composable fun Placeholder(t:String){ Box(Modifier.fillMaxSize().background(Bg).padding(24.dp), contentAlignment=Alignment.Center){ Text(t, color=TextDim) } }
