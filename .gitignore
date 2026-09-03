@@ -49,3 +49,4 @@ next-env.d.ts
 android/
 ios/
 out/
+android/app/closer-release.keystore
