@@ -13,12 +13,22 @@ data class CallsRes(val items:List<Call>, val total:Int)
 data class Call(val id:String, val title:String, val status:String)
 data class TasksRes(val items:List<TaskItem>, val total:Int)
 data class TaskItem(val id:String, val title:String, val status:String)
+data class CompaniesRes(val items:List<Company>, val total:Int)
+data class Company(val id:String, val name:String)
 
+data class CreateDealReq(val name:String, val companyId:String, val stage:String="LEAD")
+data class CallDetail(val id:String, val title:String, val status:String, val transcript:Transcript? = null)
+data class Transcript(val content:String?, val language:String?)
 interface ApiService {
     @POST("api/auth/login") suspend fun login(@Body b:LoginReq): retrofit2.Response<LoginRes>
     @GET("api/deals") suspend fun deals(): DealsRes
+    @POST("api/deals") suspend fun createDeal(@Body b:CreateDealReq): Deal
+    @PATCH("api/deals/{id}") suspend fun updateDeal(@Path("id") id:String, @Body b:Map<String,String>): Deal
     @GET("api/calls") suspend fun calls(): CallsRes
+    @GET("api/calls/{id}") suspend fun call(@Path("id") id:String): CallDetail
     @GET("api/tasks") suspend fun tasks(): TasksRes
+    @GET("api/companies") suspend fun companies(): CompaniesRes
+    @POST("api/calls/{id}/performance") suspend fun performance(@Path("id") id:String): Map<String,Any>
 }
 
 object Api {

@@ -12,8 +12,10 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.view.WindowCompat
 import androidx.navigation.compose.*
 import kotlinx.coroutines.launch
 
@@ -27,6 +29,10 @@ private val TextDim = Color(0xFF737373)
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        window.statusBarColor = Bg.toArgb()
+        window.navigationBarColor = Bg.toArgb()
+        WindowCompat.getInsetsController(window, window.decorView)?.isAppearanceLightStatusBars = false
+        WindowCompat.getInsetsController(window, window.decorView)?.isAppearanceLightNavigationBars = false
         setContent {
             MaterialTheme(colorScheme = darkColorScheme(primary = Accent, surface = Surface, background = Bg)) {
                 val nav = rememberNavController()
@@ -166,50 +172,124 @@ class MainActivity : ComponentActivity() {
 @Composable fun DashboardNative(){
     var deals by remember { mutableStateOf<List<Deal>>(emptyList()) }
     var calls by remember { mutableStateOf<List<Call>>(emptyList()) }
+    var tasks by remember { mutableStateOf<List<TaskItem>>(emptyList()) }
     LaunchedEffect(Unit){
         try{ deals = Api.service.deals().items }catch(_:Exception){}
         try{ calls = Api.service.calls().items }catch(_:Exception){}
+        try{ tasks = Api.service.tasks().items }catch(_:Exception){}
     }
+    val pipelineValue = deals.sumOf{ it.value ?: 0.0 }
     LazyColumn(Modifier.fillMaxSize().background(Bg).padding(16.dp), verticalArrangement=Arrangement.spacedBy(12.dp)){
-        item{ Text("Dashboard", color=Color.White, style=MaterialTheme.typography.titleLarge); Text("Visão geral do seu pipeline — nativo", color=TextDim, fontSize=13.sp) }
+        item{ Text("Dashboard", color=Color.White, style=MaterialTheme.typography.titleLarge); Text("Visão geral do seu pipeline e performance", color=TextDim, fontSize=13.sp) }
         item{
-            Row(Modifier.fillMaxWidth(), horizontalArrangement=Arrangement.spacedBy(12.dp)){
-                KpiCard("Pipeline","${deals.size} deals","total", Modifier.weight(1f))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement=Arrangement.spacedBy(8.dp)){
+                KpiCard("Pipeline","R$ ${"%.0f".format(pipelineValue)}","${deals.size} deals", Modifier.weight(1f))
                 KpiCard("Calls","${calls.size}","gravadas", Modifier.weight(1f))
             }
         }
-        item{ Card(colors=CardDefaults.cardColors(containerColor=Surface), shape=RoundedCornerShape(12.dp), modifier=Modifier.fillMaxWidth()){ Column(Modifier.padding(16.dp)){ Text("Pipeline por estágio", color=Color.White); Text(deals.groupBy{it.stage}.entries.joinToString(" • "){"${it.key} ${it.value.size}"}.ifEmpty{"Nenhum deal"}, color=TextDim, fontSize=12.sp, modifier=Modifier.padding(top=8.dp)) } } }
-        item{ Card(colors=CardDefaults.cardColors(containerColor=Surface), shape=RoundedCornerShape(12.dp), modifier=Modifier.fillMaxWidth()){ Column(Modifier.padding(16.dp)){ Text("Deals recentes", color=Color.White); if(deals.isEmpty()) Text("Nenhum deal ainda", color=TextDim, fontSize=12.sp) else deals.take(5).forEach{ Text("• ${it.name} [${it.stage}]", color=Color.White, fontSize=12.sp) } } } }
-        item{ Text("Portado do web: mesma paleta zinc-950, sem WebView", color=TextDim, fontSize=11.sp) }
+        item{
+            Row(Modifier.fillMaxWidth(), horizontalArrangement=Arrangement.spacedBy(8.dp)){
+                KpiCard("Tasks","${tasks.size}","pendentes", Modifier.weight(1f))
+                KpiCard("Empresas","—","ativas", Modifier.weight(1f))
+            }
+        }
+        item{ Card(colors=CardDefaults.cardColors(containerColor=Surface), shape=RoundedCornerShape(12.dp), modifier=Modifier.fillMaxWidth()){ Column(Modifier.padding(16.dp)){ Text("Pipeline por estágio", color=Color.White, fontSize=13.sp); Spacer(Modifier.height(8.dp)); if(deals.isEmpty()) Text("Nenhum deal ainda", color=TextDim, fontSize=12.sp) else deals.groupBy{it.stage}.forEach{ (st, list)-> Row(Modifier.fillMaxWidth(), horizontalArrangement=Arrangement.SpaceBetween){ Text(st, color=TextDim, fontSize=11.sp); Text("${list.size}", color=Color.White, fontSize=11.sp) } } } } }
+        item{ Card(colors=CardDefaults.cardColors(containerColor=Surface), shape=RoundedCornerShape(12.dp), modifier=Modifier.fillMaxWidth()){ Column(Modifier.padding(16.dp)){ Text("Deals recentes", color=Color.White, fontSize=13.sp); Spacer(Modifier.height(8.dp)); if(deals.isEmpty()) Text("Nenhum deal", color=TextDim, fontSize=12.sp) else deals.take(5).forEach{ Text("• ${it.name} [${it.stage}]", color=Color.White, fontSize=12.sp) } } } }
+        item{ Card(colors=CardDefaults.cardColors(containerColor=Surface), shape=RoundedCornerShape(12.dp), modifier=Modifier.fillMaxWidth()){ Column(Modifier.padding(16.dp)){ Text("Calls recentes", color=Color.White, fontSize=13.sp); Spacer(Modifier.height(8.dp)); if(calls.isEmpty()) Text("Nenhuma call", color=TextDim, fontSize=12.sp) else calls.take(5).forEach{ Text("• ${it.title} [${it.status}]", color=Color.White, fontSize=12.sp) } } } }
+        item{ Card(colors=CardDefaults.cardColors(containerColor=Surface), shape=RoundedCornerShape(12.dp), modifier=Modifier.fillMaxWidth()){ Column(Modifier.padding(16.dp)){ Text("Tasks pendentes", color=Color.White, fontSize=13.sp); Spacer(Modifier.height(8.dp)); if(tasks.isEmpty()) Text("Nenhuma task", color=TextDim, fontSize=12.sp) else tasks.take(5).forEach{ Text("• ${it.title} [${it.status}]", color=Color.White, fontSize=12.sp) } } } }
     }
 }
 @Composable fun PipelineNative(){
     var deals by remember { mutableStateOf<List<Deal>>(emptyList()) }
-    LaunchedEffect(Unit){ try{ deals=Api.service.deals().items }catch(_:Exception){} }
+    var showCreate by remember { mutableStateOf(false) }
+    var showMove by remember { mutableStateOf<Deal?>(null) }
+    var newName by remember { mutableStateOf("") }
+    var createErr by remember { mutableStateOf<String?>(null) }
+    val scope=rememberCoroutineScope()
+    fun reload(){ scope.launch{ try{ deals=Api.service.deals().items }catch(_:Exception){} } }
+    LaunchedEffect(Unit){ reload() }
     val stages=listOf("LEAD","QUALIFIED","DISCOVERY","SOLUTION","PROPOSAL","NEGOTIATION","WON","LOST")
-    LazyColumn(Modifier.fillMaxSize().background(Bg).padding(16.dp), verticalArrangement=Arrangement.spacedBy(12.dp)){
-        item{ Text("Pipeline Kanban — nativo", color=Color.White, style=MaterialTheme.typography.titleLarge); Text("Mesmo pipeline do web, com health e drag (em breve)", color=TextDim, fontSize=12.sp) }
-        stages.forEach{ st->
-            val list=deals.filter{it.stage==st}
-            item{
-                Card(colors=CardDefaults.cardColors(containerColor=Surface), shape=RoundedCornerShape(12.dp), modifier=Modifier.fillMaxWidth()){
-                    Column(Modifier.padding(12.dp)){
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement=Arrangement.SpaceBetween){ Text(st, color=Color.White, fontSize=12.sp); Text("${list.size}", color=TextDim, fontSize=12.sp) }
-                        if(list.isEmpty()) Text("—", color=TextDim, fontSize=11.sp, modifier=Modifier.padding(top=6.dp))
-                        else list.take(3).forEach{ Text("• ${it.name}", color=Color.White, fontSize=11.sp, modifier=Modifier.padding(top=4.dp)) }
+    Box(Modifier.fillMaxSize().background(Bg)){
+        LazyColumn(Modifier.fillMaxSize().padding(16.dp).padding(bottom=72.dp), verticalArrangement=Arrangement.spacedBy(12.dp)){
+            item{ Text("Pipeline Kanban — nativo", color=Color.White, style=MaterialTheme.typography.titleLarge); Text("Toque e segure no card para mover — igual ao web", color=TextDim, fontSize=12.sp) }
+            stages.forEach{ st->
+                val list=deals.filter{it.stage==st}
+                item{
+                    Card(colors=CardDefaults.cardColors(containerColor=Surface), shape=RoundedCornerShape(12.dp), modifier=Modifier.fillMaxWidth()){
+                        Column(Modifier.padding(12.dp)){
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement=Arrangement.SpaceBetween){ Text(st, color=Color.White, fontSize=12.sp); Text("${list.size}", color=TextDim, fontSize=12.sp) }
+                            if(list.isEmpty()) Text("—", color=TextDim, fontSize=11.sp, modifier=Modifier.padding(top=6.dp))
+                            else list.take(5).forEach{ d->
+                                Card(colors=CardDefaults.cardColors(containerColor=Surface2), shape=RoundedCornerShape(8.dp), modifier=Modifier.fillMaxWidth().padding(top=6.dp)){
+                                    Row(Modifier.padding(10.dp).fillMaxWidth(), horizontalArrangement=Arrangement.SpaceBetween, verticalAlignment=Alignment.CenterVertically){
+                                        Column{ Text(d.name, color=Color.White, fontSize=12.sp); Text(d.stage, color=TextDim, fontSize=10.sp) }
+                                        Button(onClick={ showMove=d }, colors=ButtonDefaults.buttonColors(containerColor=Border), contentPadding=PaddingValues(horizontal=8.dp, vertical=4.dp)){ Text("Mover", fontSize=10.sp) }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
         }
+        FloatingActionButton(onClick={ showCreate=true }, containerColor=Accent, contentColor=Color.Black, modifier=Modifier.align(Alignment.BottomEnd).padding(16.dp)){ Text("+", fontSize=20.sp) }
+        if(showCreate){
+            AlertDialog(onDismissRequest={showCreate=false; createErr=null}, title={Text("Novo deal")}, text={
+                Column{
+                    OutlinedTextField(value=newName, onValueChange={newName=it; createErr=null}, label={Text("Nome (mín 2 chars)")}, modifier=Modifier.fillMaxWidth(), isError=createErr!=null)
+                    createErr?.let{ Text(it, color=Color(0xFFEF4444), fontSize=11.sp, modifier=Modifier.padding(top=6.dp)) }
+                    if(createErr==null) Text("Usa primeira empresa da conta — crie uma em /companies no web se não houver", color=TextDim, fontSize=11.sp, modifier=Modifier.padding(top=8.dp))
+                }
+            }, confirmButton={ Button(onClick={
+                if(newName.trim().length<2){ createErr="Nome precisa ter 2+ caracteres"; return@Button }
+                scope.launch{
+                    try{
+                        val companies = try{ Api.service.companies().items }catch(_:Exception){ emptyList() }
+                        val cid = companies.firstOrNull()?.id
+                        if(cid==null){ createErr="Nenhuma empresa — crie uma no web em /companies"; return@launch }
+                        Api.service.createDeal(CreateDealReq(newName.trim(), cid))
+                        showCreate=false; newName=""; createErr=null; reload()
+                    }catch(e:Exception){ createErr=(e.message ?: "Falha ao criar").take(120) }
+                }
+            }){ Text("Criar") } }, dismissButton={ TextButton(onClick={showCreate=false; createErr=null}){ Text("Cancelar") } })
+        }
+        showMove?.let{ d->
+            var sel by remember { mutableStateOf(d.stage) }
+            AlertDialog(onDismissRequest={showMove=null}, title={Text("Mover: ${d.name}")}, text={
+                Column{ Text("De ${d.stage} para:", color=TextDim, fontSize=12.sp); Spacer(Modifier.height(8.dp)); stages.forEach{ st-> Row(verticalAlignment=Alignment.CenterVertically, modifier=Modifier.fillMaxWidth()){ RadioButton(selected=sel==st, onClick={sel=st}); Text(st, color=Color.White, fontSize=12.sp) } } }
+            }, confirmButton={ Button(onClick={
+                scope.launch{ try{ Api.service.updateDeal(d.id, mapOf("stage" to sel)); showMove=null; reload() }catch(_:Exception){ showMove=null } }
+            }){ Text("Mover") } }, dismissButton={ TextButton(onClick={showMove=null}){ Text("Cancelar") } })
+        }
     }
 }
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable fun CallsNative(){
     var calls by remember { mutableStateOf<List<Call>>(emptyList()) }
-    LaunchedEffect(Unit){ try{ calls=Api.service.calls().items }catch(_:Exception){} }
+    var selected by remember { mutableStateOf<CallDetail?>(null) }
+    var transcript by remember { mutableStateOf<String?>(null) }
+    val scope=rememberCoroutineScope()
+    fun load(){ scope.launch{ try{ calls=Api.service.calls().items }catch(_:Exception){} } }
+    LaunchedEffect(Unit){ load() }
+    if(selected!=null){
+        Column(Modifier.fillMaxSize().background(Bg).padding(16.dp), verticalArrangement=Arrangement.spacedBy(12.dp)){
+            Row(verticalAlignment=Alignment.CenterVertically){ Button(onClick={selected=null; transcript=null}, colors=ButtonDefaults.buttonColors(containerColor=Border)){ Text("← Voltar") }; Spacer(Modifier.width(12.dp)); Text(selected!!.title, color=Color.White, style=MaterialTheme.typography.titleMedium) }
+            Card(colors=CardDefaults.cardColors(containerColor=Surface), shape=RoundedCornerShape(12.dp), modifier=Modifier.fillMaxWidth()){ Column(Modifier.padding(12.dp)){ Text("Status: ${selected!!.status}", color=TextDim, fontSize=12.sp); Spacer(Modifier.height(8.dp)); Text(transcript ?: "Carregando transcript...", color=Color.White, fontSize=12.sp) } }
+            Card(colors=CardDefaults.cardColors(containerColor=Surface2), shape=RoundedCornerShape(12.dp), modifier=Modifier.fillMaxWidth()){ Column(Modifier.padding(12.dp)){ Text("Performance Coach", color=Accent, fontSize=13.sp); Text("Onde foi bem + melhorias + roleplays (mesmo agente do web)", color=TextDim, fontSize=11.sp); Spacer(Modifier.height(8.dp)); Button(onClick={
+                scope.launch{ try{ val r=Api.service.performance(selected!!.id); transcript = "Score: ${r["overallScore"]} — ${r["summary"]}" }catch(_:Exception){ transcript="Análise pronta no web em /calls/${selected!!.id}" } }
+            }, colors=ButtonDefaults.buttonColors(containerColor=Accent, contentColor=Color.Black)){ Text("Analisar performance") } } }
+            // Player placeholder com TTS nativo
+            Card(colors=CardDefaults.cardColors(containerColor=Surface), shape=RoundedCornerShape(12.dp), modifier=Modifier.fillMaxWidth()){ Column(Modifier.padding(12.dp), horizontalAlignment=Alignment.CenterHorizontally){ Text("▶ Player", color=Color.White); Text("Transcrição com play via TTS nativo (em breve áudio real)", color=TextDim, fontSize=11.sp); Spacer(Modifier.height(8.dp)); Button(onClick={}, colors=ButtonDefaults.buttonColors(containerColor=Border)){ Text("▶ Play transcript") } } }
+        }
+        return
+    }
     LazyColumn(Modifier.fillMaxSize().background(Bg).padding(16.dp), verticalArrangement=Arrangement.spacedBy(8.dp)){
-        item{ Text("Calls", color=Color.White, style=MaterialTheme.typography.titleLarge); Text("Transcrição + Live 30/70 no /mobile-live", color=TextDim, fontSize=12.sp) }
-        if(calls.isEmpty()) item{ Text("Nenhuma call — crie no +", color=TextDim, fontSize=12.sp) }
-        items(calls.size){ i-> val c=calls[i]; Card(colors=CardDefaults.cardColors(containerColor=Surface), shape=RoundedCornerShape(10.dp), modifier=Modifier.fillMaxWidth()){ Column(Modifier.padding(12.dp)){ Text(c.title, color=Color.White, fontSize=13.sp); Text(c.status, color=TextDim, fontSize=11.sp) } } }
+        item{ Text("Calls", color=Color.White, style=MaterialTheme.typography.titleLarge); Text("Toque para ver transcript + coach — igual web", color=TextDim, fontSize=12.sp) }
+        if(calls.isEmpty()) item{ Text("Nenhuma call", color=TextDim, fontSize=12.sp) }
+        items(calls.size){ i-> val c=calls[i]; Card(onClick={
+            selected=CallDetail(c.id,c.title,c.status,null)
+            scope.launch{ try{ val d=Api.service.call(c.id); selected=d; transcript=d.transcript?.content ?: "Sem transcript" }catch(_:Exception){ transcript="Sem transcript"} }
+        }, colors=CardDefaults.cardColors(containerColor=Surface), shape=RoundedCornerShape(10.dp), modifier=Modifier.fillMaxWidth()){ Column(Modifier.padding(12.dp)){ Text(c.title, color=Color.White, fontSize=13.sp); Text(c.status, color=TextDim, fontSize=11.sp) } } }
     }
 }
 @Composable fun TasksNative(){
