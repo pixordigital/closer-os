@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useI18n } from "@/components/i18n/provider";
 import type { Locale } from "@/lib/i18n";
+import { AISettings } from "@/components/settings/ai-settings";
 
 export function SettingsForms({ initial }:{ initial:{ user:{id:string,name:string,email:string,createdAt:Date,locale?:string}, org:{id:string,name:string,slug:string,createdAt:Date}, membership:{role:string}, memberCount:number, email:string } }){
   const { locale, setLocale } = useI18n();
@@ -82,6 +83,8 @@ export function SettingsForms({ initial }:{ initial:{ user:{id:string,name:strin
           <p className="text-xs text-zinc-500">{t("settings.language.desc")}</p>
         </CardContent>
       </Card>
+
+      <AISettings />
 
       <Card>
         <CardHeader><CardTitle className="text-sm">Sistema</CardTitle></CardHeader>

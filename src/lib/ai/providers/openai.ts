@@ -5,10 +5,13 @@ import type { AIProvider, GenerateTextOpts, GenerateStructuredOpts } from "../pr
 export class OpenAIProvider implements AIProvider {
   readonly name = "openai";
   private apiKey: string;
-  private base = "https://api.openai.com/v1";
+  private base: string;
 
-  constructor(apiKey?: string) {
+  constructor(apiKey?: string, base?: string) {
     this.apiKey = apiKey ?? process.env.OPENAI_API_KEY ?? "";
+    this.base = base ?? process.env.LITELLM_URL ?? "https://api.openai.com/v1";
+    if(this.base.endsWith("/")) this.base=this.base.slice(0,-1);
+    if(!this.base.endsWith("/v1") && this.base.includes("litellm")) this.base=this.base+"/v1";
   }
 
   private headers() {
