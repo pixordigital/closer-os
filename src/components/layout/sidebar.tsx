@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/components/i18n/provider";
 import {
-  LayoutDashboard, Kanban, Building2, Users, Phone, Theater, Compass, GraduationCap, Calculator, CheckSquare, Bot, Settings, LogOut, Webhook, Workflow, ListTree, Plug, Radio, ShieldAlert,
+  LayoutDashboard, Kanban, Building2, Users, Phone, Theater, Compass, GraduationCap, Calculator, CheckSquare, Bot, Settings, LogOut, Webhook, Workflow, ListTree, Plug, Radio, ShieldAlert, Sparkles,
 } from "lucide-react";
 
 const NAV_KEYS = [
@@ -20,6 +20,7 @@ const NAV_KEYS = [
   { href: "/coaching", key: "nav.coaching", icon: GraduationCap },
   { href: "/roi", key: "nav.roi", icon: Calculator },
   { href: "/tasks", key: "nav.tasks", icon: CheckSquare },
+  { href: "/agents", key: "nav.agents", icon: Sparkles },
   { href: "/command", key: "nav.command", icon: Bot },
   { href: "/webhooks", key: "nav.webhooks", icon: Webhook },
   { href: "/automations", key: "nav.automations", icon: Workflow },

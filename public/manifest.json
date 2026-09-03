@@ -1,0 +1,10 @@
+{
+  "name": "Closer OS",
+  "short_name": "Closer",
+  "description": "AI Sales Operating System",
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "background_color": "#0a0a0a",
+  "theme_color": "#00e5a0",
+  "icons": [{ "src": "/favicon.ico", "sizes": "256x256", "type": "image/x-icon" }]
+}

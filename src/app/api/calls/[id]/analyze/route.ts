@@ -89,6 +89,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
     await logAIUsage({ organizationId, userId, provider: provider.name, model, operation: "generateStructured", agent: "CallAnalyst", latencyMs, estimatedCost: estimateCost(model, null, null) });
     await auditLog({ organizationId, userId, action: "call.analyzed", entityType: "Call", entityId: id, metadata: { insightsCreated, discoveryApplied } as never });
     fireTriggers({ organizationId, event: "call.completed", payload: { id, callId: id, dealId: deal?.id ?? call.dealId, insightsCreated, discoveryApplied }, idempotencyKey: `call.analyzed:${id}:${Date.now()}` });
+    try{ const { runAllAgents } = await import("@/lib/agents/autonomous"); await runAllAgents(organizationId, "call.completed", { callId: id, dealId: deal?.id ?? call.dealId }); }catch{}
 
     return NextResponse.json({ ...result, _meta: { discoveryApplied, insightsCreated } });
   } catch (e) {

@@ -7,6 +7,7 @@ import type { Locale } from "@/lib/i18n";
 export const metadata: Metadata = {
   title: "Closer OS — AI Sales Operating System",
   description: "Segundo cérebro comercial + simulador de vendas + AI Sales Coach.",
+  manifest: "/manifest.json",
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requireTenant, parsePagination } from "@/lib/tenant";
 import { prisma } from "@/lib/db";
 import { Button } from "@/components/ui/button";
+import { ImportCsv } from "@/components/companies/import-csv";
 
 export default async function CompaniesPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const { organizationId } = await requireTenant();
@@ -45,6 +46,7 @@ export default async function CompaniesPage({ searchParams }: { searchParams: Pr
         </table>
       </div>
       <div className="mt-3 text-xs text-zinc-500">{total} total · página {page}</div>
+      <div className="mt-6"><ImportCsv /></div>
     </div>
   );
 }
