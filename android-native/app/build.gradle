@@ -14,10 +14,18 @@ android {
         versionName "1.0-native"
         vectorDrawables { useSupportLibrary true }
     }
+    signingConfigs {
+        release {
+            storeFile file('closer-release.keystore')
+            storePassword 'Closer123'
+            keyAlias 'closer'
+            keyPassword 'Closer123'
+        }
+    }
     buildTypes {
         release {
+            signingConfig signingConfigs.release
             minifyEnabled false
-            signingConfig signingConfigs.debug
         }
     }
     compileOptions {
