@@ -1,7 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
@@ -60,6 +59,9 @@ export function LiveCoachPanel(){
   const [perf,setPerf]=useState<Perf|null>(null);
   const [perfLoading,setPerfLoading]=useState(false);
   const [perfErr,setPerfErr]=useState<string|null>(null);
+  const [stealth,setStealth]=useState(false);
+  const [stealthRec,setStealthRec]=useState<MediaRecorder|null>(null);
+  const [stealthStatus,setStealthStatus]=useState<string|null>(null);
 
   function transcriptText(){ return segments.slice().reverse().map(s=>`${s.speaker}: ${s.text}`).join("\n").slice(0,12000); }
 
@@ -72,26 +74,63 @@ export function LiveCoachPanel(){
     setPerfLoading(false);
     if(!r.ok){ setPerfErr(j.error ?? "Falha"); return; }
     setPerf(j as Perf);
+    if(save && j.savedCallId){
+      // auto-feed: hygiene + pipeline + outreach via agents, HITL will queue approvals
+      await fetch("/api/agents",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({ trigger:"call.completed", payload:{ callId: j.savedCallId } })}).catch(()=>{});
+      setPerfErr(`Salvo como call + agentes alimentaram sistema — veja /agents para aprovações`);
+    }
+  }
+
+  async function toggleStealth(){
+    if(stealth){
+      stealthRec?.stop();
+      setStealth(false); setStealthStatus("Stealth parado");
+      return;
+    }
+    try{
+      const stream=await (navigator.mediaDevices as unknown as {getDisplayMedia:(c:unknown)=>Promise<MediaStream>}).getDisplayMedia({ audio:true, video:false });
+      const rec=new MediaRecorder(stream, { mimeType: MediaRecorder.isTypeSupported("audio/webm;codecs=opus") ? "audio/webm;codecs=opus" : "audio/webm" });
+      const chunks:BlobPart[]=[];
+      rec.ondataavailable=e=>{ if(e.data.size>0) chunks.push(e.data); };
+      rec.onstop=async()=>{
+        const blob=new Blob(chunks, { type: rec.mimeType });
+        setStealthStatus("Transcrevendo stealth via Whisper...");
+        const fd=new FormData(); fd.append("file", blob, "stealth.webm");
+        const r=await fetch("/api/live/transcribe",{method:"POST", body: fd});
+        const j=await r.json().catch(()=>({}));
+        if(r.ok && j.transcript){
+          const lines=j.transcript.split(/(?<=[.!?])\s+/).slice(0,12);
+          for(const l of lines){ if(l.trim()) await analyze(l.trim(), "prospect"); }
+          setStealthStatus(`Stealth transcreveu ${lines.length} trechos — invisível ao prospect ✓`);
+        } else setStealthStatus(j.error??"Falha stealth");
+        stream.getTracks().forEach(t=>t.stop());
+      };
+      rec.start(2000);
+      setStealthRec(rec); setStealth(true); setStealthStatus("Stealth ativo — capturando áudio da aba (Granola-style) invisível");
+      setTimeout(()=>{ if(rec.state==="recording") rec.stop(); setStealth(false); }, 120000);
+    }catch(e){ setStealthStatus(String(e).slice(0,200)); }
   }
 
   return (
     <div className="grid gap-4 lg:grid-cols-[1fr_380px]">
       <div className="space-y-3">
         <Card>
-          <CardHeader className="py-3"><CardTitle className="text-sm">Live transcript — fala do prospect → coach em tempo real</CardTitle></CardHeader>
+          <CardHeader className="py-3"><CardTitle className="text-sm">Live transcript — stealth Granola (invisível) + mic</CardTitle></CardHeader>
           <CardContent className="space-y-3">
-            <div className="flex gap-2">
-              <Button size="sm" onClick={toggleMic} variant={listening?"destructive":"default"}>{listening?"● Parar escuta":"▶ Iniciar escuta (mic)"}</Button>
+            <div className="flex gap-2 flex-wrap">
+              <Button size="sm" onClick={toggleMic} variant={listening?"destructive":"default"}>{listening?"● Parar escuta":"▶ Mic"}</Button>
+              <Button size="sm" onClick={toggleStealth} variant={stealth?"destructive":"outline"}>{stealth?"● Parar stealth":"◉ Stealth (Granola) — invisível"}</Button>
               <select value={speaker} onChange={e=>setSpeaker(e.target.value as never)} className="h-9 rounded-md border border-zinc-800 bg-zinc-900 px-2 text-sm">
                 <option value="prospect">Prospect</option>
                 <option value="closer">Closer (você)</option>
               </select>
             </div>
+            {stealthStatus && <div className="rounded bg-zinc-950 p-2 text-xs text-amber-300">{stealthStatus}</div>}
             <div className="flex gap-2">
               <Textarea value={manual} onChange={e=>setManual(e.target.value)} placeholder="Ou digite o que o prospect falou e pressione Enter..." rows={2} className="text-sm" onKeyDown={e=>{ if(e.key==="Enter" && !e.shiftKey){ e.preventDefault(); if(manual.trim()){ analyze(manual.trim(), speaker); setManual(""); } } }} />
               <Button size="sm" onClick={()=>{ if(manual.trim()){ analyze(manual.trim(), speaker); setManual(""); } }}>Enviar</Button>
             </div>
-            <div className="rounded-lg border border-zinc-800 bg-zinc-950 p-2 text-xs text-zinc-500">Mic usa Web Speech API (Chrome/Edge). Em Meet/Zoom com áudio do PC, deixe o mic captando saída ou digite manualmente para ver coach instantâneo.</div>
+            <div className="rounded-lg border border-zinc-800 bg-zinc-950 p-2 text-xs text-zinc-500">Stealth: captura áudio da aba via getDisplayMedia → Whisper, sem bot visível (Granola-style). Mic usa Web Speech API. Ao finalizar, clique "Salvar como call + analisar" — agentes alimentam discovery/objeções/pipeline automaticamente e pedem aprovação em /agents quando precisa.</div>
           </CardContent>
         </Card>
 
