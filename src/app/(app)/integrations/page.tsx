@@ -3,6 +3,7 @@ import { requireTenant } from "@/lib/tenant";
 import { Badge } from "@/components/ui/badge";
 import { listProviders } from "@/lib/integrations/registry";
 import { EvolutionQuick } from "@/components/whatsapp/evolution-quick";
+import { GoogleQuick } from "@/components/integrations/google-quick";
 
 export const dynamic = "force-dynamic";
 
@@ -17,7 +18,7 @@ export default async function IntegrationsPage() {
     <div className="p-6 sm:p-8">
       <h1 className="text-2xl font-semibold tracking-tight">Integrations</h1>
       <p className="mt-1 text-sm text-zinc-400">Conecte calendar/transcript. Mock pronto; Google stub quando <code className="text-zinc-300">GOOGLE_CALENDAR_CREDENTIALS</code> configurado. Import cria Call+Transcript.</p>
-      <div className="mt-6"><EvolutionQuick /></div>
+      <div className="mt-6 space-y-4"><EvolutionQuick /><GoogleQuick /></div>
 
       <section className="mt-6 rounded-xl border border-zinc-800 bg-zinc-900 p-4">
         <h2 className="font-medium">Providers disponíveis</h2>

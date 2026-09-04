@@ -49,8 +49,8 @@ services:
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
       LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:-sk-closer-master}
-    ports:
-      - "4000:4000"
+    expose:
+      - "4000"
     healthcheck:
       test: ["CMD", "python3", "-c", "import urllib.request, sys; urllib.request.urlopen('http://127.0.0.1:4000/health/liveliness', timeout=3); sys.exit(0)"]
       interval: 15s
