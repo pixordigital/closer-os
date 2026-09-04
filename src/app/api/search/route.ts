@@ -7,7 +7,7 @@ import { getAIProvider } from "@/lib/ai/init";
 export async function GET(req: Request) {
   const { organizationId } = await requireTenant();
   const url = new URL(req.url);
-  const parsed = searchQuerySchema.safeParse({ q: url.searchParams.get("q"), semantic: url.searchParams.get("semantic"), limit: url.searchParams.get("limit") });
+  const parsed = searchQuerySchema.safeParse({ q: url.searchParams.get("q"), semantic: url.searchParams.get("semantic") ?? undefined, limit: url.searchParams.get("limit") ?? undefined });
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   const { q, semantic, limit } = parsed.data;
 

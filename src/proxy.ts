@@ -14,6 +14,7 @@ const PUBLIC = [
   "/api/health",
   "/api/ready",
   "/api/webhooks/inbound",
+  "/api/track/open",
 ];
 
 function isPublic(pathname: string): boolean {
