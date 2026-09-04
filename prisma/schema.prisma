@@ -300,16 +300,16 @@ model Company {
   companySize    String? // e.g. "1-10" "11-50" "51-200" "201-1000" "1000+"
   revenueRange   String?
   location       String?
-  cnpj         String?
+  cnpj           String?
   description    String?  @db.Text
   notes          String?  @db.Text
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  contacts     Contact[]
-  deals        Deal[]
-  accountHealth   AccountHealth?
+  organization       Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  contacts           Contact[]
+  deals              Deal[]
+  accountHealth      AccountHealth?
   expansionPlaybooks ExpansionPlaybook[]
 
   @@index([organizationId])
@@ -327,15 +327,16 @@ model Contact {
   phone          String?
   linkedinUrl    String?
   decisionRole   DecisionRole @default(UNKNOWN)
-  consentAt    DateTime?
-  consentSource String?
+  consentAt      DateTime?
+  consentSource  String?
   notes          String?      @db.Text
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  company      Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  deals        Deal[]       @relation("PrimaryContact")
+  organization Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  company      Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  deals        Deal[]        @relation("PrimaryContact")
+  Stakeholder  Stakeholder[]
 
   @@index([organizationId])
   @@index([companyId])
@@ -363,21 +364,24 @@ model Deal {
   nextStep          String?   @db.Text
   nextStepDate      DateTime?
   lostReason        String?   @db.Text
-  ownerId         String?
+  ownerId           String?
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 
-  organization    Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  company         Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  primaryContact  Contact?         @relation("PrimaryContact", fields: [primaryContactId], references: [id])
-  calls           Call[]
-  discoveryFields DiscoveryField[]
-  objections      Objection[]
-  followUps       FollowUp[]
-  tasks           Task[]
-  roiModels       ROIModel[]
-  aiInsights      AIInsight[]
-  proposals       Proposal[]
+  organization         Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  company              Company               @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  primaryContact       Contact?              @relation("PrimaryContact", fields: [primaryContactId], references: [id])
+  calls                Call[]
+  discoveryFields      DiscoveryField[]
+  objections           Objection[]
+  followUps            FollowUp[]
+  tasks                Task[]
+  roiModels            ROIModel[]
+  aiInsights           AIInsight[]
+  proposals            Proposal[]
+  Stakeholder          Stakeholder[]
+  MAPItem              MAPItem[]
+  ProcurementChecklist ProcurementChecklist?
 
   @@index([organizationId])
   @@index([companyId])
@@ -426,6 +430,7 @@ model Call {
   transcript   Transcript?
   aiInsights   AIInsight[]
   objections   Objection[]
+  clips        CallClip[]
 
   @@index([organizationId])
   @@index([dealId])
@@ -958,25 +963,25 @@ model Quota {
 }
 
 model Proposal {
-  id             String   @id @default(cuid())
+  id             String    @id @default(cuid())
   organizationId String
   dealId         String
   createdBy      String?
-  token          String   @unique
-  status         String   @default("DRAFT") // DRAFT | SENT | VIEWED | ACCEPTED | REJECTED | EXPIRED
+  token          String    @unique
+  status         String    @default("DRAFT") // DRAFT | SENT | VIEWED | ACCEPTED | REJECTED | EXPIRED
   title          String
-  html           String?  @db.Text
+  html           String?   @db.Text
   items          Json? // [{ name, qty, unitPrice, total }]
-  total          Decimal? @db.Decimal(14, 2)
-  currency       String   @default("BRL")
+  total          Decimal?  @db.Decimal(14, 2)
+  currency       String    @default("BRL")
   expiresAt      DateTime?
   viewedAt       DateTime?
-  viewedCount    Int      @default(0)
+  viewedCount    Int       @default(0)
   acceptedAt     DateTime?
   acceptedIp     String?
   rejectedAt     DateTime?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   deal         Deal         @relation(fields: [dealId], references: [id], onDelete: Cascade)
@@ -1024,14 +1029,14 @@ model AIConfig {
 
 // ── Forecast / Waterfall (Phase 1) ─────────────────────────────────
 model ForecastSnapshot {
-  id             String   @id @default(cuid())
+  id             String           @id @default(cuid())
   organizationId String
   userId         String? // null = org level
-  period         String   // YYYY-MM
+  period         String // YYYY-MM
   category       ForecastCategory
-  amount         Decimal  @db.Decimal(14, 2)
+  amount         Decimal          @db.Decimal(14, 2)
   dealsCount     Int
-  createdAt      DateTime @default(now())
+  createdAt      DateTime         @default(now())
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
@@ -1042,23 +1047,23 @@ model ForecastSnapshot {
 
 // ── Stakeholder Map + MAP Buyer Portal (Phase 2) ───────────────────
 model Stakeholder {
-  id             String              @id @default(cuid())
-  organizationId String
-  dealId         String
-  contactId      String?
-  name           String
-  title          String?
-  email          String?
-  phone          String?
-  role           StakeholderRole
-  influence      StakeholderInfluence @default(MEDIUM)
-  sentiment      StakeholderSentiment @default(UNKNOWN)
-  isChampion     Boolean             @default(false)
-  isDecisionMaker Boolean            @default(false)
-  notes          String?             @db.Text
-  lastEngagement DateTime?
-  createdAt      DateTime            @default(now())
-  updatedAt      DateTime            @updatedAt
+  id              String               @id @default(cuid())
+  organizationId  String
+  dealId          String
+  contactId       String?
+  name            String
+  title           String?
+  email           String?
+  phone           String?
+  role            StakeholderRole
+  influence       StakeholderInfluence @default(MEDIUM)
+  sentiment       StakeholderSentiment @default(UNKNOWN)
+  isChampion      Boolean              @default(false)
+  isDecisionMaker Boolean              @default(false)
+  notes           String?              @db.Text
+  lastEngagement  DateTime?
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   deal         Deal         @relation(fields: [dealId], references: [id], onDelete: Cascade)
@@ -1070,18 +1075,18 @@ model Stakeholder {
 
 // ── MAP Items ──────────────────────────────────────────────────────
 model MAPItem {
-  id             String         @id @default(cuid())
+  id             String        @id @default(cuid())
   organizationId String
   dealId         String
   title          String
-  description    String?        @db.Text
-  owner          String?        // buyer-side owner name
+  description    String?       @db.Text
+  owner          String? // buyer-side owner name
   ownerEmail     String?
   dueDate        DateTime?
-  status         MAPItemStatus  @default(NOT_STARTED)
-  order          Int            @default(0)
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
+  status         MAPItemStatus @default(NOT_STARTED)
+  order          Int           @default(0)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   deal         Deal         @relation(fields: [dealId], references: [id], onDelete: Cascade)
@@ -1092,20 +1097,20 @@ model MAPItem {
 
 // ── Procurement Checklist ──────────────────────────────────────────
 model ProcurementChecklist {
-  id                 String            @id @default(cuid())
-  organizationId     String
-  dealId             String            @unique
-  questionnaireSent  Boolean           @default(false)
-  questionnaireReceived Boolean        @default(false)
-  securityReview     Boolean           @default(false)
-  legalReview        Boolean           @default(false)
-  status             ProcurementStatus @default(NOT_STARTED)
-  notes              String?           @db.Text
-  submittedAt        DateTime?
-  approvedAt         DateTime?
-  rejectedAt         DateTime?
-  createdAt          DateTime          @default(now())
-  updatedAt          DateTime          @updatedAt
+  id                    String            @id @default(cuid())
+  organizationId        String
+  dealId                String            @unique
+  questionnaireSent     Boolean           @default(false)
+  questionnaireReceived Boolean           @default(false)
+  securityReview        Boolean           @default(false)
+  legalReview           Boolean           @default(false)
+  status                ProcurementStatus @default(NOT_STARTED)
+  notes                 String?           @db.Text
+  submittedAt           DateTime?
+  approvedAt            DateTime?
+  rejectedAt            DateTime?
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   deal         Deal         @relation(fields: [dealId], references: [id], onDelete: Cascade)
@@ -1121,11 +1126,11 @@ model CallClip {
   callId         String
   userId         String // creator
   title          String
-  startTime      Int    // seconds from call start
-  endTime        Int    // seconds from call start
-  transcript     String @db.Text
+  startTime      Int // seconds from call start
+  endTime        Int // seconds from call start
+  transcript     String   @db.Text
   tags           String[] // objection category, skill, etc.
-  isPublic       Boolean @default(false) // shared with team
+  isPublic       Boolean  @default(false) // shared with team
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
@@ -1143,12 +1148,13 @@ model ScorecardTemplate {
   organizationId String
   name           String
   description    String?  @db.Text
-  criteria       Json     // [{ skill, weight, description, minScore }]
+  criteria       Json // [{ skill, weight, description, minScore }]
   isDefault      Boolean  @default(false)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization  Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  Certification Certification[]
 
   @@index([organizationId])
 }
@@ -1167,8 +1173,8 @@ model Certification {
   createdAt      DateTime            @default(now())
   updatedAt      DateTime            @updatedAt
 
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   template     ScorecardTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
 
   @@index([organizationId])
@@ -1177,24 +1183,24 @@ model Certification {
 
 // ── Customer Success / Health Score (Phase 4) ──────────────────────
 model AccountHealth {
-  id                 String           @id @default(cuid())
+  id                 String          @id @default(cuid())
   organizationId     String
-  companyId          String           @unique
-  overallScore       Int              // 0-100
-  tier               HealthScoreTier  @default(HEALTHY)
-  adoptionScore      Int?             // 0-100
-  engagementScore    Int?             // 0-100
-  supportScore       Int?             // 0-100
-  npsScore           Int?             // -100 to 100
+  companyId          String          @unique
+  overallScore       Int // 0-100
+  tier               HealthScoreTier @default(HEALTHY)
+  adoptionScore      Int? // 0-100
+  engagementScore    Int? // 0-100
+  supportScore       Int? // 0-100
+  npsScore           Int? // -100 to 100
   lastLoginDays      Int?
   lastTouchDays      Int?
   openTickets        Int?
-  churnRisk          Float?           // 0-1
-  expansionPotential Float?           // 0-1
-  signals            Json?            // [{ type, value, date, source }]
-  calculatedAt       DateTime         @default(now())
-  createdAt          DateTime         @default(now())
-  updatedAt          DateTime         @updatedAt
+  churnRisk          Float? // 0-1
+  expansionPotential Float? // 0-1
+  signals            Json? // [{ type, value, date, source }]
+  calculatedAt       DateTime        @default(now())
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   company      Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
@@ -1207,13 +1213,15 @@ model ExpansionPlaybook {
   organizationId String
   name           String
   trigger        String // e.g. "high_adoption_low_usage", "contract_renewal_90d"
-  conditions     Json   // [{ field, op, value }]
-  steps          Json   // [{ action, templateId, delayDays, ownerRole }]
-  isActive       Boolean @default(true)
+  conditions     Json // [{ field, op, value }]
+  steps          Json // [{ action, templateId, delayDays, ownerRole }]
+  isActive       Boolean  @default(true)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  Company      Company?     @relation(fields: [companyId], references: [id])
+  companyId    String?
 
   @@index([organizationId])
   @@index([trigger])
