@@ -1,7 +1,6 @@
 import { prisma } from "@/lib/db";
 import { requireTenant } from "@/lib/tenant";
 import { Badge } from "@/components/ui/badge";
-import { listProviders } from "@/lib/integrations/registry";
 import { EvolutionQuick } from "@/components/whatsapp/evolution-quick";
 import { GoogleQuick } from "@/components/integrations/google-quick";
 
@@ -9,24 +8,13 @@ export const dynamic = "force-dynamic";
 
 export default async function IntegrationsPage() {
   const { organizationId } = await requireTenant();
-  const [items, providers] = await Promise.all([
-    prisma.integrationConnection.findMany({ where: { organizationId }, orderBy: { createdAt: "desc" } }),
-    Promise.resolve(listProviders()),
-  ]);
+  const items = await prisma.integrationConnection.findMany({ where: { organizationId }, orderBy: { createdAt: "desc" } });
 
   return (
     <div className="p-6 sm:p-8">
       <h1 className="text-2xl font-semibold tracking-tight">Integrations</h1>
       <p className="mt-1 text-sm text-zinc-400">Conecte calendar/transcript. Mock pronto; Google stub quando <code className="text-zinc-300">GOOGLE_CALENDAR_CREDENTIALS</code> configurado. Import cria Call+Transcript.</p>
       <div className="mt-6 space-y-4"><EvolutionQuick /><GoogleQuick /></div>
-
-      <section className="mt-6 rounded-xl border border-zinc-800 bg-zinc-900 p-4">
-        <h2 className="font-medium">Providers disponíveis</h2>
-        <div className="mt-3 flex flex-wrap gap-2">
-          {providers.map((p) => <Badge key={p.name} className="border-zinc-700 bg-zinc-800">{p.name} · {p.kind}</Badge>)}
-        </div>
-        <p className="mt-2 text-xs text-zinc-500">POST <code>/api/integrations</code> {"{ provider, config }"} · POST <code>/api/integrations/import</code> {"{ text|url, dealId? }"} · GET <code>/api/copilot/stream?callId=&dealId=</code> SSE.</p>
-      </section>
 
       <section className="mt-6 rounded-xl border border-zinc-800 bg-zinc-900 p-4">
         <h2 className="font-medium">Conexões ({items.length})</h2>
