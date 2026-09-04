@@ -65,14 +65,14 @@ export default async function Home(){
         .cta .btn-primary{background:white;color:var(--accent)}
         footer{border-top:1px solid var(--border);padding:40px 24px}
         footer .inner{max-width:1280px;margin:0 auto;display:flex;justify-content:space-between;flex-wrap:wrap;gap:24px;color:var(--muted);font-size:13px}
-        @media(max-width:900px){.mock{grid-template-columns:1fr}.bento{grid-template-columns:1fr}.bento-card.large{grid-row:auto}.pricing{grid-template-columns:1fr}.price-card.popular{transform:none}nav .links{display:none}}
+        @media(max-width:900px){.mock{grid-template-columns:1fr}.bento{grid-template-columns:1fr}.bento-card.large{grid-row:auto}.pricing{grid-template-columns:1fr}.price-card.popular{transform:none}nav .inner{gap:12px;flex-wrap:wrap;height:auto;min-height:64px;padding:12px 16px}nav .links{gap:16px;flex-wrap:wrap}nav .links a{font-size:13px}.hero{padding:40px 16px 24px}section{padding:40px 16px}}
       `}</style>
 
       <nav>
         <div className="inner">
           <Link href="/" className="logo"><div className="logo-mark"><span>C</span></div><span className="logo-text">CLOSER OS</span></Link>
-          <div className="links"><a href="#novidades">Novidades</a><a href="#features">Recursos</a><a href="#pricing">Planos</a><a href="/dashboard">App</a></div>
-          <div className="links">{logged ? <Link href="/dashboard" className="btn-primary">Dashboard →</Link> : <><Link href="/login" style={{color:"var(--muted)",textDecoration:"none",fontSize:"14px"}}>Entrar</Link><Link href="/register" className="btn-primary">Começar grátis</Link></>}</div>
+          <div className="links"><a href="#novidades">Novidades</a><a href="#features">Recursos</a><a href="#pricing">Planos</a><a href="/today">App</a></div>
+          <div className="links">{logged ? <Link href="/today" className="btn-primary">Hoje →</Link> : <><Link href="/login" style={{color:"var(--muted)",textDecoration:"none",fontSize:"14px"}}>Entrar</Link><Link href="/register" className="btn-primary">Começar grátis</Link></>}</div>
         </div>
       </nav>
 

@@ -26,7 +26,7 @@ export default function RegisterPage() {
     const json = await res.json().catch(() => ({}));
     setLoading(false);
     if (!res.ok) { setErr(json.error ?? json.message ?? "Falha ao criar conta"); return; }
-    router.push("/dashboard"); router.refresh();
+    router.push("/today"); router.refresh();
   }
 
   return (

@@ -28,7 +28,7 @@ function LoginForm() {
     const json = await res.json().catch(() => ({}));
     setLoading(false);
     if (!res.ok) { setErr(json.error ?? "Login failed"); return; }
-    router.push(sp.get("next") ?? "/dashboard");
+    router.push(sp.get("next") ?? "/today");
     router.refresh();
   }
 

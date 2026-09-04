@@ -11,6 +11,7 @@ const ACTIONS=[
   { k:"Objeções", h:"/objections" },
   { k:"Agentes", h:"/agents" },
   { k:"Pipeline", h:"/pipeline" },
+  { k:"Hoje", h:"/today" },
   { k:"Dashboard", h:"/dashboard" },
 ];
 

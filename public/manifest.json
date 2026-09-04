@@ -2,7 +2,7 @@
   "name": "Closer OS",
   "short_name": "Closer",
   "description": "AI Sales Operating System",
-  "start_url": "/dashboard",
+  "start_url": "/today",
   "display": "standalone",
   "background_color": "#0a0a0a",
   "theme_color": "#00e5a0",
