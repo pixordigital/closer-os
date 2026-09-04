@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db";
 import { getDiscoveryWithHealth, healthColor, healthBarColor } from "@/lib/discovery";
 import { DiscoveryPanel } from "@/components/discovery/discovery-panel";
 import { PreCallPanel } from "@/components/ai/pre-call-panel";
+import { Attachments } from "@/components/deals/attachments";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
@@ -144,6 +145,7 @@ export default async function DealDetailPage({ params }: { params: Promise<{ id:
               ))}
             </div>
           </section>
+          <Attachments dealId={deal.id} />
         </div>
       </div>
 

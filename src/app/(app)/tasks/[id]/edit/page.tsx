@@ -15,12 +15,14 @@ export default function EditTaskPage() {
   const [fetchErr,setFetchErr]=useState<string|null>(null);
   const [initial,setInitial]=useState<Record<string,string>|null>(null);
   const [deals,setDeals]=useState<{id:string,name:string}[]>([]);
+  const [members,setMembers]=useState<{id:string,name:string}[]>([]);
 
   useEffect(()=>{ fetch("/api/deals?limit=100").then(r=>r.json()).then(j=>setDeals(j.items ?? [])).catch(()=>{}); },[]);
+  useEffect(()=>{ fetch("/api/members").then(r=>r.json()).then(j=>setMembers(j.items ?? [])).catch(()=>{}); },[]);
   useEffect(()=>{
     fetch(`/api/tasks/${id}`).then(r=>r.json()).then(j=>{
       if(j.error){ setFetchErr(String(j.error)); return; }
-      setInitial({ title:j.title??"", description:j.description??"", dealId:j.dealId??"", dueDate: j.dueDate ? String(j.dueDate).slice(0,10):"", status:j.status??"TODO" });
+      setInitial({ title:j.title??"", description:j.description??"", dealId:j.dealId??"", assigneeId:j.assigneeId??"", dueDate: j.dueDate ? String(j.dueDate).slice(0,10):"", status:j.status??"TODO" });
     }).catch(e=>setFetchErr(String(e)));
   },[id]);
 
@@ -29,6 +31,7 @@ export default function EditTaskPage() {
     const fd=new FormData(e.currentTarget);
     const body:any=Object.fromEntries([...fd.entries()].map(([k,v])=>[k,(v as string).trim()]));
     if(!body.dealId) delete body.dealId;
+    if(!body.assigneeId) delete body.assigneeId;
     if(!body.dueDate) delete body.dueDate;
     if(!body.description) delete body.description;
     const res=await fetch(`/api/tasks/${id}`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
@@ -56,6 +59,12 @@ export default function EditTaskPage() {
               <select name="dealId" defaultValue={initial.dealId} className="flex h-9 w-full rounded-md border border-zinc-800 bg-zinc-900 px-3 text-sm text-zinc-100">
                 <option value="">— sem deal —</option>
                 {deals.map(d=><option key={d.id} value={d.id}>{d.name}</option>)}
+              </select>
+            </div>
+            <div className="space-y-1.5"><Label>Responsável</Label>
+              <select name="assigneeId" defaultValue={initial.assigneeId} className="flex h-9 w-full rounded-md border border-zinc-800 bg-zinc-900 px-3 text-sm text-zinc-100">
+                <option value="">— sem responsável —</option>
+                {members.map(m=><option key={m.id} value={m.id}>{m.name}</option>)}
               </select>
             </div>
             <div className="grid grid-cols-2 gap-3">

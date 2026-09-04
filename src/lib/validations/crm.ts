@@ -69,6 +69,7 @@ export const taskStatusEnum = z.enum(["TODO","IN_PROGRESS","DONE","CANCELLED"]);
 
 export const taskCreateSchema = z.object({
   dealId: z.string().cuid().optional().nullable(),
+  assigneeId: z.string().cuid().optional().nullable(),
   title: z.string().min(2).max(160),
   description: z.string().max(5000).optional(),
   dueDate: z.string().optional().nullable().transform((v) => v ? new Date(v) : null),

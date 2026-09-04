@@ -37,7 +37,6 @@ class MainActivity : ComponentActivity() {
             MaterialTheme(colorScheme = darkColorScheme(primary = Accent, surface = Surface, background = Bg)) {
                 val nav = rememberNavController()
                 var logged by remember { mutableStateOf(false) }
-                // check saved login via prefs (simple)
                 NavHost(navController = nav, startDestination = if(logged) "main" else "login") {
                     composable("login") {
                         LoginScreen(onLogin = {
@@ -90,9 +89,11 @@ class MainActivity : ComponentActivity() {
     var selected by remember { mutableStateOf(0) }
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
-    val bottomItems = listOf("Dashboard" to "dashboard","Pipeline" to "pipeline","Calls" to "calls","Tasks" to "tasks","Mais" to "more")
+    var notifTotal by remember { mutableStateOf(0) }
+    LaunchedEffect(Unit){ try{ val n=Api.service.notifications(); notifTotal=(n["total"] as? Double)?.toInt() ?: 0 }catch(_:Exception){} }
+    val bottomItems = listOf("Hoje" to "today","Pipeline" to "pipeline","Calls" to "calls","Tasks" to "tasks","Mais" to "more")
     val allItems = listOf(
-        "Dashboard" to "dashboard","Pipeline" to "pipeline","Empresas" to "companies","Contatos" to "contacts","Calls" to "calls","Live Coach" to "live","Objeções" to "objections","Roleplay" to "roleplay","Discovery" to "discovery","Coaching" to "coaching","ROI" to "roi","Tasks" to "tasks","Agentes" to "agents","Command" to "command","Webhooks" to "webhooks","Automations" to "automations","Jobs" to "jobs","Integrações" to "integrations","Settings" to "settings"
+        "Hoje" to "today","Dashboard" to "dashboard","Pipeline" to "pipeline","Empresas" to "companies","Contatos" to "contacts","Calls" to "calls","Live Coach" to "live","Objeções" to "objections","Roleplay" to "roleplay","Discovery" to "discovery","Coaching" to "coaching","ROI" to "roi","Tasks" to "tasks","Inbox" to "inbox","Reports" to "reports","Digest" to "digest","Import" to "import","Buscar" to "search","Agentes" to "agents","Command" to "command","Webhooks" to "webhooks","Automations" to "automations","Jobs" to "jobs","Integrações" to "integrations","Settings" to "settings"
     )
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -100,7 +101,8 @@ class MainActivity : ComponentActivity() {
             ModalDrawerSheet(drawerContainerColor = Surface){
                 Column(Modifier.padding(16.dp)){
                     Row(verticalAlignment=Alignment.CenterVertically){ Box(Modifier.size(28.dp).background(Accent, RoundedCornerShape(8.dp)), contentAlignment=Alignment.Center){ Text("C", color=Color.Black)}; Spacer(Modifier.width(8.dp)); Text("CLOSER OS", color=Color.White) }
-                    Spacer(Modifier.height(16.dp))
+                    if(notifTotal>0) Text("$notifTotal alertas — veja Hoje", color=Accent, fontSize=11.sp, modifier=Modifier.padding(top=6.dp))
+                    Spacer(Modifier.height(12.dp))
                     allItems.forEach{ (label,route) ->
                         val isLive = route=="live"
                         NavigationDrawerItem(
@@ -127,6 +129,11 @@ class MainActivity : ComponentActivity() {
                 CenterAlignedTopAppBar(
                     title={ Text("CLOSER OS", color=Color.White)},
                     navigationIcon={ IconButton(onClick={ scope.launch{ drawerState.open() }}){ Text("☰", color=Color.White) } },
+                    actions={
+                        if(notifTotal>0) BadgedBox(badge={ Badge(containerColor=Accent, contentColor=Color.Black){ Text("$notifTotal") } }){
+                            IconButton(onClick={ nav.navigate("today") }){ Text("🔔", color=Color.White) }
+                        }
+                    },
                     colors=TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor=Surface)
                 )
             },
@@ -136,14 +143,15 @@ class MainActivity : ComponentActivity() {
                         NavigationBarItem(selected=selected==i, onClick={
                             if(route=="more"){ scope.launch{ drawerState.open() }; return@NavigationBarItem }
                             selected=i; nav.navigate(route)
-                        }, icon={Text(when(i){0->"🏠" 1->"📊" 2->"📞" 3->"✅" else->"⋯"})}, label={Text(label, fontSize=10.sp)})
+                        }, icon={Text(when(i){0->"☀" 1->"📊" 2->"📞" 3->"✅" else->"⋯"})}, label={Text(label, fontSize=10.sp)})
                     }
                 }
             },
             containerColor=Bg
         ){ pad->
             Box(Modifier.padding(pad)){
-                NavHost(navController=nav, startDestination="dashboard"){
+                NavHost(navController=nav, startDestination="today"){
+                    composable("today"){ TodayNative() }
                     composable("dashboard"){ DashboardNative() }
                     composable("pipeline"){ PipelineNative() }
                     composable("companies"){ SimpleListNative("Empresas","/api/companies") }
@@ -156,12 +164,17 @@ class MainActivity : ComponentActivity() {
                     composable("coaching"){ Placeholder("Coaching — skills e training") }
                     composable("roi"){ Placeholder("ROI — 3 cenários") }
                     composable("tasks"){ TasksNative() }
+                    composable("inbox"){ InboxNative() }
+                    composable("reports"){ ReportsNative() }
+                    composable("digest"){ DigestNative() }
+                    composable("import"){ ImportNative() }
+                    composable("search"){ SearchNative() }
                     composable("agents"){ Placeholder("Agentes autônomos — fila HITL") }
-                    composable("command"){ Placeholder("Command — pergunte aos dados") }
+                    composable("command"){ SearchNative() }
                     composable("webhooks"){ Placeholder("Webhooks") }
                     composable("automations"){ Placeholder("Automations") }
                     composable("jobs"){ Placeholder("Jobs queue") }
-                    composable("integrations"){ Placeholder("Integrações — Calendar, Evolution") }
+                    composable("integrations"){ Placeholder("Integrações — Calendar, Evolution, Email") }
                     composable("settings"){ Column(Modifier.padding(16.dp)){ Text("Settings", color=Color.White); Button(onClick=onLogout, modifier=Modifier.padding(top=12.dp)){ Text("Sair") } } }
                 }
             }
@@ -197,6 +210,156 @@ class MainActivity : ComponentActivity() {
         item{ Card(colors=CardDefaults.cardColors(containerColor=Surface), shape=RoundedCornerShape(12.dp), modifier=Modifier.fillMaxWidth()){ Column(Modifier.padding(16.dp)){ Text("Deals recentes", color=Color.White, fontSize=13.sp); Spacer(Modifier.height(8.dp)); if(deals.isEmpty()) Text("Nenhum deal", color=TextDim, fontSize=12.sp) else deals.take(5).forEach{ Text("• ${it.name} [${it.stage}]", color=Color.White, fontSize=12.sp) } } } }
         item{ Card(colors=CardDefaults.cardColors(containerColor=Surface), shape=RoundedCornerShape(12.dp), modifier=Modifier.fillMaxWidth()){ Column(Modifier.padding(16.dp)){ Text("Calls recentes", color=Color.White, fontSize=13.sp); Spacer(Modifier.height(8.dp)); if(calls.isEmpty()) Text("Nenhuma call", color=TextDim, fontSize=12.sp) else calls.take(5).forEach{ Text("• ${it.title} [${it.status}]", color=Color.White, fontSize=12.sp) } } } }
         item{ Card(colors=CardDefaults.cardColors(containerColor=Surface), shape=RoundedCornerShape(12.dp), modifier=Modifier.fillMaxWidth()){ Column(Modifier.padding(16.dp)){ Text("Tasks pendentes", color=Color.White, fontSize=13.sp); Spacer(Modifier.height(8.dp)); if(tasks.isEmpty()) Text("Nenhuma task", color=TextDim, fontSize=12.sp) else tasks.take(5).forEach{ Text("• ${it.title} [${it.status}]", color=Color.White, fontSize=12.sp) } } } }
+    }
+}
+@Composable fun TodayNative(){
+    var data by remember { mutableStateOf<Map<String,Any>?>(null) }
+    var err by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(Unit){ try{ data=Api.service.today() }catch(e:Exception){ err=e.message } }
+    LazyColumn(Modifier.fillMaxSize().background(Bg).padding(16.dp), verticalArrangement=Arrangement.spacedBy(12.dp)){
+        item{ Text("Hoje — My Day", color=Color.White, style=MaterialTheme.typography.titleLarge); Text("Atrasadas · Hoje · Sem next step · Paradas 7d · Calls hoje", color=TextDim, fontSize=12.sp) }
+        if(err!=null) item{ Text(err!!, color=Color(0xFFEF4444), fontSize=12.sp) }
+        if(data==null && err==null) item{ Text("Carregando...", color=TextDim, fontSize=12.sp) }
+        data?.let{ d->
+            val counts=d["counts"] as? Map<*,*>
+            item{
+                Row(Modifier.fillMaxWidth(), horizontalArrangement=Arrangement.spacedBy(8.dp)){
+                    KpiCard("Atrasadas","${counts?.get("overdue") ?: "?"}","", Modifier.weight(1f))
+                    KpiCard("Hoje","${counts?.get("dueToday") ?: "?"}","", Modifier.weight(1f))
+                    KpiCard("Paradas","${counts?.get("stale") ?: "?"}","", Modifier.weight(1f))
+                }
+            }
+            fun section(title:String, key:String){
+                val list=d[key] as? List<*> ?: emptyList<Any>()
+                if(list.isEmpty()) return
+            }
+            item{ Card(colors=CardDefaults.cardColors(containerColor=Surface), shape=RoundedCornerShape(12.dp), modifier=Modifier.fillMaxWidth()){ Column(Modifier.padding(16.dp)){ Text("Resumo Hoje", color=Color.White, fontSize=13.sp); Spacer(Modifier.height(8.dp)); counts?.forEach{ (k,v)-> Row(Modifier.fillMaxWidth(), horizontalArrangement=Arrangement.SpaceBetween){ Text(k.toString(), color=TextDim, fontSize=11.sp); Text(v.toString(), color=Color.White, fontSize=11.sp)} } } } }
+            listOf("overdue","dueToday","noNextStep","stale","callsToday","pendingFollowUps").forEach{ key ->
+                val list=d[key] as? List<*> ?: return@forEach
+                if(list.isEmpty()) return@forEach
+                item{
+                    Card(colors=CardDefaults.cardColors(containerColor=Surface), shape=RoundedCornerShape(12.dp), modifier=Modifier.fillMaxWidth()){
+                        Column(Modifier.padding(12.dp)){
+                            Text(key, color=Accent, fontSize=12.sp)
+                            Spacer(Modifier.height(6.dp))
+                            list.take(5).forEach{ it->
+                                val m=it as? Map<*,*> ?: return@forEach
+                                Text("• ${m["title"] ?: m["name"] ?: m["subject"] ?: it.toString().take(80)}", color=Color.White, fontSize=11.sp)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+@Composable fun InboxNative(){
+    var items by remember { mutableStateOf<List<Map<String,Any>>>(emptyList()) }
+    var prov by remember { mutableStateOf("") }
+    var err by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(Unit){
+        try{
+            val r=Api.service.inbox()
+            val list=r["items"] as? List<*> ?: emptyList<Any>()
+            items=list.filterIsInstance<Map<String,Any>>()
+            prov=r["provider"]?.toString() ?: ""
+        }catch(e:Exception){ err=e.message }
+    }
+    LazyColumn(Modifier.fillMaxSize().background(Bg).padding(16.dp), verticalArrangement=Arrangement.spacedBy(8.dp)){
+        item{ Text("Inbox — Email 2 vias", color=Color.White, style=MaterialTheme.typography.titleLarge); Text("Provider: $prov", color=TextDim, fontSize=11.sp) }
+        if(err!=null) item{ Text(err!!, color=Color(0xFFEF4444), fontSize=12.sp) }
+        if(items.isEmpty() && err==null) item{ Text("Nenhum email — conecte Gmail em /integrations ou use mock", color=TextDim, fontSize=12.sp) }
+        items(items.size){ i-> val m=items[i]; Card(colors=CardDefaults.cardColors(containerColor=Surface), shape=RoundedCornerShape(10.dp), modifier=Modifier.fillMaxWidth()){ Column(Modifier.padding(12.dp)){ Text(m["subject"]?.toString() ?: "(sem assunto)", color=Color.White, fontSize=13.sp); Text("${m["from"]} · ${m["date"]?.toString()?.take(16) ?: ""}", color=TextDim, fontSize=11.sp); Text(m["snippet"]?.toString() ?: "", color=Color.White, fontSize=11.sp, modifier=Modifier.padding(top=4.dp)) } } }
+    }
+}
+@Composable fun ReportsNative(){
+    var data by remember { mutableStateOf<Map<String,Any>?>(null) }
+    var err by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(Unit){ try{ data=Api.service.reports() }catch(e:Exception){ err=e.message } }
+    LazyColumn(Modifier.fillMaxSize().background(Bg).padding(16.dp), verticalArrangement=Arrangement.spacedBy(12.dp)){
+        item{ Text("Relatórios", color=Color.White, style=MaterialTheme.typography.titleLarge); Text("Funnel · Win rate · Ciclo médio", color=TextDim, fontSize=12.sp) }
+        if(err!=null) item{ Text(err!!, color=Color(0xFFEF4444), fontSize=12.sp) }
+        if(data==null && err==null) item{ Text("Carregando...", color=TextDim, fontSize=12.sp) }
+        data?.let{ d->
+            item{ Card(colors=CardDefaults.cardColors(containerColor=Surface), shape=RoundedCornerShape(12.dp), modifier=Modifier.fillMaxWidth()){ Column(Modifier.padding(16.dp)){ Text("Funil por estágio", color=Color.White, fontSize=13.sp); Spacer(Modifier.height(8.dp)); val byStage=d["byStage"] as? List<*> ?: emptyList<Any>(); if(byStage.isEmpty()) Text("Sem dados", color=TextDim, fontSize=11.sp) else byStage.forEach{ r-> val m=r as? Map<*,*> ?: return@forEach; Row(Modifier.fillMaxWidth(), horizontalArrangement=Arrangement.SpaceBetween){ Text(m["stage"].toString(), color=TextDim, fontSize=11.sp); Text("${m["_count"] ?: m["count"] ?: "?"}", color=Color.White, fontSize=11.sp)} } } } }
+            item{ Card(colors=CardDefaults.cardColors(containerColor=Surface), shape=RoundedCornerShape(12.dp), modifier=Modifier.fillMaxWidth()){ Column(Modifier.padding(16.dp)){ Text("Métricas", color=Color.White, fontSize=13.sp); Spacer(Modifier.height(8.dp)); listOf("winRate","avgCycleDays","totalDeals","won","lost").forEach{ k-> Row(Modifier.fillMaxWidth(), horizontalArrangement=Arrangement.SpaceBetween){ Text(k, color=TextDim, fontSize=11.sp); Text("${d[k] ?: "—"}", color=Color.White, fontSize=11.sp)} } } } }
+        }
+    }
+}
+@Composable fun DigestNative(){
+    var data by remember { mutableStateOf<Map<String,Any>?>(null) }
+    var err by remember { mutableStateOf<String?>(null) }
+    val scope=rememberCoroutineScope()
+    fun load(){ scope.launch{ try{ data=Api.service.digest() }catch(e:Exception){ err=e.message } } }
+    LaunchedEffect(Unit){ load() }
+    LazyColumn(Modifier.fillMaxSize().background(Bg).padding(16.dp), verticalArrangement=Arrangement.spacedBy(12.dp)){
+        item{ Text("Digest 08h", color=Color.White, style=MaterialTheme.typography.titleLarge); Text("Mesmo conteúdo do email 08h — no app", color=TextDim, fontSize=12.sp) }
+        item{ Button(onClick={ load() }, colors=ButtonDefaults.buttonColors(containerColor=Accent, contentColor=Color.Black)){ Text("Atualizar") } }
+        if(err!=null) item{ Text(err!!, color=Color(0xFFEF4444), fontSize=12.sp) }
+        if(data==null && err==null) item{ Text("Carregando...", color=TextDim, fontSize=12.sp) }
+        data?.let{ d->
+            val text=d["text"]?.toString() ?: d.toString()
+            item{ Card(colors=CardDefaults.cardColors(containerColor=Surface), shape=RoundedCornerShape(12.dp), modifier=Modifier.fillMaxWidth()){ Column(Modifier.padding(16.dp)){ Text(text, color=Color.White, fontSize=11.sp) } } }
+        }
+    }
+}
+@Composable fun ImportNative(){
+    var result by remember { mutableStateOf<String?>(null) }
+    var loading by remember { mutableStateOf(false) }
+    val scope=rememberCoroutineScope()
+    LazyColumn(Modifier.fillMaxSize().background(Bg).padding(16.dp), verticalArrangement=Arrangement.spacedBy(12.dp)){
+        item{ Text("Import — Pipedrive / HubSpot", color=Color.White, style=MaterialTheme.typography.titleLarge); Text("Envia 1 linha de teste — no web use CSV completo", color=TextDim, fontSize=11.sp) }
+        item{
+            Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){
+                Button(onClick={
+                    loading=true; scope.launch{
+                        try{
+                            val r=Api.service.importPipedrive(mapOf("rows" to listOf(mapOf("companyName" to "Teste Pipedrive ${System.currentTimeMillis()%1000}", "dealName" to "Deal Import Teste", "value" to 10000))))
+                            result=r.toString().take(500)
+                        }catch(e:Exception){ result=e.message } ; loading=false
+                    }
+                }, enabled=!loading, colors=ButtonDefaults.buttonColors(containerColor=Accent, contentColor=Color.Black)){ Text("Pipedrive teste") }
+                Button(onClick={
+                    loading=true; scope.launch{
+                        try{
+                            val r=Api.service.importHubspot(mapOf("rows" to listOf(mapOf("companyName" to "Teste HubSpot ${System.currentTimeMillis()%1000}", "dealName" to "Deal HS Teste", "value" to 10000))))
+                            result=r.toString().take(500)
+                        }catch(e:Exception){ result=e.message } ; loading=false
+                    }
+                }, enabled=!loading, colors=ButtonDefaults.buttonColors(containerColor=Border)){ Text("HubSpot teste") }
+            }
+        }
+        result?.let{ item{ Card(colors=CardDefaults.cardColors(containerColor=Surface), shape=RoundedCornerShape(12.dp), modifier=Modifier.fillMaxWidth()){ Text(it, color=Color.White, fontSize=11.sp, modifier=Modifier.padding(16.dp)) } } }
+        item{ Text("Bulk e Merge: use web /pipeline (bulk stage) e /companies (merge). Mobile só importa linha teste.", color=TextDim, fontSize=11.sp) }
+    }
+}
+@Composable fun SearchNative(){
+    var q by remember { mutableStateOf("") }
+    var results by remember { mutableStateOf<Map<String,Any>?>(null) }
+    var err by remember { mutableStateOf<String?>(null) }
+    val scope=rememberCoroutineScope()
+    Column(Modifier.fillMaxSize().background(Bg).padding(16.dp), verticalArrangement=Arrangement.spacedBy(12.dp)){
+        Text("Buscar — Command", color=Color.White, style=MaterialTheme.typography.titleLarge)
+        Row(verticalAlignment=Alignment.CenterVertically, horizontalArrangement=Arrangement.spacedBy(8.dp)){
+            OutlinedTextField(value=q, onValueChange={q=it}, label={Text("Buscar deals, empresas...")}, modifier=Modifier.weight(1f), colors=OutlinedTextFieldDefaults.colors(focusedBorderColor=Accent))
+            Button(onClick={
+                scope.launch{
+                    try{ results=Api.service.search(q); err=null }catch(e:Exception){ err=e.message }
+                }
+            }, colors=ButtonDefaults.buttonColors(containerColor=Accent, contentColor=Color.Black)){ Text("Buscar") }
+        }
+        err?.let{ Text(it, color=Color(0xFFEF4444), fontSize=12.sp) }
+        results?.let{ r->
+            Card(colors=CardDefaults.cardColors(containerColor=Surface), shape=RoundedCornerShape(12.dp), modifier=Modifier.fillMaxWidth()){
+                Column(Modifier.padding(16.dp)){
+                    Text("Resultados", color=Color.White, fontSize=13.sp)
+                    Spacer(Modifier.height(8.dp))
+                    val items=r["items"] as? List<*> ?: r["results"] as? List<*> ?: emptyList<Any>()
+                    if(items.isEmpty()) Text(r.toString().take(800), color=TextDim, fontSize=11.sp)
+                    else items.take(10).forEach{ it-> Text("• ${it.toString().take(120)}", color=Color.White, fontSize=11.sp) }
+                }
+            }
+        }
     }
 }
 @Composable fun PipelineNative(){
@@ -278,7 +441,6 @@ class MainActivity : ComponentActivity() {
             Card(colors=CardDefaults.cardColors(containerColor=Surface2), shape=RoundedCornerShape(12.dp), modifier=Modifier.fillMaxWidth()){ Column(Modifier.padding(12.dp)){ Text("Performance Coach", color=Accent, fontSize=13.sp); Text("Onde foi bem + melhorias + roleplays (mesmo agente do web)", color=TextDim, fontSize=11.sp); Spacer(Modifier.height(8.dp)); Button(onClick={
                 scope.launch{ try{ val r=Api.service.performance(selected!!.id); transcript = "Score: ${r["overallScore"]} — ${r["summary"]}" }catch(_:Exception){ transcript="Análise pronta no web em /calls/${selected!!.id}" } }
             }, colors=ButtonDefaults.buttonColors(containerColor=Accent, contentColor=Color.Black)){ Text("Analisar performance") } } }
-            // Player placeholder com TTS nativo
             Card(colors=CardDefaults.cardColors(containerColor=Surface), shape=RoundedCornerShape(12.dp), modifier=Modifier.fillMaxWidth()){ Column(Modifier.padding(12.dp), horizontalAlignment=Alignment.CenterHorizontally){ Text("▶ Player", color=Color.White); Text("Transcrição com play via TTS nativo (em breve áudio real)", color=TextDim, fontSize=11.sp); Spacer(Modifier.height(8.dp)); Button(onClick={}, colors=ButtonDefaults.buttonColors(containerColor=Border)){ Text("▶ Play transcript") } } }
         }
         return

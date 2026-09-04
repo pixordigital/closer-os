@@ -9,7 +9,8 @@ export type JobType =
   | "evaluate_roleplay"
   | "enrich_company"
   | "weekly_coaching_rollup"
-  | "webhook_retry";
+  | "webhook_retry"
+  | "daily_digest";
 
 export async function enqueueJob(params: {
   organizationId?: string | null;
@@ -71,6 +72,34 @@ const handlers: Record<string, (payload: Record<string, unknown>) => Promise<unk
   enrich_company: async (p) => ({ note: "ResearchProvider future", companyId: p.companyId }),
   weekly_coaching_rollup: async () => ({ note: "weekly rollup future" }),
   webhook_retry: async (p) => ({ note: "webhook retry future", deliveryId: p.deliveryId }),
+  daily_digest: async (p) => {
+    const orgId = p.organizationId as string | undefined;
+    if(!orgId) throw new Error("organizationId required");
+    const { buildDigest, next08h } = await import("./digest");
+    const { getIntegration } = await import("./integrations/registry");
+    const d = await buildDigest(orgId);
+    // try email via org email integration, else log via recommendation
+    try{
+      const conn = await prisma.integrationConnection.findFirst({ where:{ organizationId: orgId, kind:"email", status:"connected" }});
+      const providerName = conn?.provider ?? "mock-email";
+      const cfg = (conn?.config as Record<string,unknown>) ?? {};
+      const prov = getIntegration(providerName);
+      // need recipient: org owner email
+      const owner = await prisma.membership.findFirst({ where:{ organizationId: orgId, role:"OWNER" }, include:{ user:true }});
+      const to = owner?.user.email ?? (p.to as string | undefined);
+      if(to && prov.sendEmail){
+        await prov.sendEmail(cfg, { to, subject:`Closer OS — Digest ${new Date().toLocaleDateString("pt-BR")}`, html: d.html });
+      } else {
+        await prisma.aIRecommendation.create({ data:{ organizationId: orgId, type:"daily_digest", title:`Digest ${new Date().toLocaleDateString("pt-BR")}`, reason: d.text.slice(0,500), payload: d as never } as never });
+      }
+    }catch(e){
+      await prisma.aIRecommendation.create({ data:{ organizationId: orgId, type:"daily_digest", title:`Digest ${new Date().toLocaleDateString("pt-BR")} (fallback)`, reason: String(e).slice(0,500), payload: d as never } as never });
+    }
+    // schedule next 08h
+    const { enqueueJob: eq } = await import("./jobs");
+    await eq({ organizationId: orgId, type:"daily_digest" as never, payload:{ organizationId: orgId }, runAt: next08h() });
+    return d.counts;
+  },
 };
 
 export async function runOneJob(): Promise<{ id: string; ok: boolean } | null> {

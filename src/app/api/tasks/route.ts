@@ -48,6 +48,10 @@ export async function POST(req: Request) {
     const deal = await prisma.deal.findFirst({ where: { id: parsed.data.dealId, organizationId } });
     if (!deal) return NextResponse.json({ error: "Deal not found in organization" }, { status: 404 });
   }
+  if(parsed.data.assigneeId){
+    const mem=await prisma.membership.findFirst({ where:{ userId: parsed.data.assigneeId, organizationId }});
+    if(!mem) return NextResponse.json({ error:"Assignee não pertence à organização" }, { status:400 });
+  }
   const task = await prisma.task.create({ data: { organizationId, ...parsed.data } as never });
   await auditLog({ organizationId, userId, action: "task.created", entityType: "Task", entityId: task.id });
   return NextResponse.json(task, { status: 201 });

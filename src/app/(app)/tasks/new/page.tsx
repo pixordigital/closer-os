@@ -10,14 +10,17 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 export default function NewTaskPage() {
   const router = useRouter();
   const [deals,setDeals]=useState<{id:string,name:string}[]>([]);
+  const [members,setMembers]=useState<{id:string,name:string}[]>([]);
   const [err,setErr]=useState<string|null>(null);
   const [loading,setLoading]=useState(false);
   useEffect(()=>{ fetch("/api/deals?limit=100").then(r=>r.json()).then(j=>setDeals(j.items ?? [])).catch(()=>{}); },[]);
+  useEffect(()=>{ fetch("/api/members").then(r=>r.json()).then(j=>setMembers(j.items ?? [])).catch(()=>{}); },[]);
   async function onSubmit(e:React.FormEvent<HTMLFormElement>) {
     e.preventDefault(); setErr(null); setLoading(true);
     const fd=new FormData(e.currentTarget);
     const body:any=Object.fromEntries([...fd.entries()].map(([k,v])=>[k,(v as string).trim()]));
     if(!body.dealId) delete body.dealId;
+    if(!body.assigneeId) delete body.assigneeId;
     if(!body.dueDate) delete body.dueDate;
     if(!body.description) delete body.description;
     const res=await fetch("/api/tasks",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
@@ -37,6 +40,12 @@ export default function NewTaskPage() {
               <select name="dealId" className="flex h-9 w-full rounded-md border border-zinc-800 bg-zinc-900 px-3 text-sm text-zinc-100">
                 <option value="">— sem deal —</option>
                 {deals.map(d=><option key={d.id} value={d.id}>{d.name}</option>)}
+              </select>
+            </div>
+            <div className="space-y-1.5"><Label>Responsável</Label>
+              <select name="assigneeId" className="flex h-9 w-full rounded-md border border-zinc-800 bg-zinc-900 px-3 text-sm text-zinc-100">
+                <option value="">— sem responsável —</option>
+                {members.map(m=><option key={m.id} value={m.id}>{m.name}</option>)}
               </select>
             </div>
             <div className="grid grid-cols-2 gap-3">

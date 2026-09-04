@@ -63,6 +63,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     const updated = await prisma.deal.update({ where: { id }, data: parsed.data as never });
     await auditLog({ organizationId, userId, action: "deal.updated", entityType: "Deal", entityId: id, metadata: { fields: Object.keys(parsed.data) } });
     fireTriggers({ organizationId, event: "deal.updated", payload: { id, ...parsed.data }, idempotencyKey: `deal.updated:${id}:${Date.now()}` });
+    void import("@/lib/agents/autonomous").then(m=>m.runAllAgents(organizationId,"deal.updated",{ dealId:id }).catch(()=>{}));
     return NextResponse.json(updated);
   } catch (e: unknown) {
     const status = (e as { status?: number })?.status ?? 500;

@@ -24,11 +24,25 @@ interface ApiService {
     @GET("api/deals") suspend fun deals(): DealsRes
     @POST("api/deals") suspend fun createDeal(@Body b:CreateDealReq): Deal
     @PATCH("api/deals/{id}") suspend fun updateDeal(@Path("id") id:String, @Body b:Map<String,String>): Deal
+    @POST("api/deals/bulk") suspend fun bulkDeals(@Body b:Map<String,Any>): Map<String,Any>
     @GET("api/calls") suspend fun calls(): CallsRes
     @GET("api/calls/{id}") suspend fun call(@Path("id") id:String): CallDetail
-    @GET("api/tasks") suspend fun tasks(): TasksRes
-    @GET("api/companies") suspend fun companies(): CompaniesRes
+    @POST("api/calls") suspend fun createCall(@Body b:Map<String,String>): Call
     @POST("api/calls/{id}/performance") suspend fun performance(@Path("id") id:String): Map<String,Any>
+    @GET("api/tasks") suspend fun tasks(): TasksRes
+    @POST("api/tasks") suspend fun createTask(@Body b:Map<String,String?>): TaskItem
+    @GET("api/companies") suspend fun companies(): CompaniesRes
+    @GET("api/companies/{id}/timeline") suspend fun timeline(@Path("id") id:String): Map<String,Any>
+    @POST("api/companies/merge") suspend fun mergeCompanies(@Body b:Map<String,String>): Map<String,Any>
+    @POST("api/import/pipedrive") suspend fun importPipedrive(@Body b:Map<String,Any>): Map<String,Any>
+    @POST("api/import/hubspot") suspend fun importHubspot(@Body b:Map<String,Any>): Map<String,Any>
+    @GET("api/today") suspend fun today(): Map<String,Any>
+    @GET("api/notifications") suspend fun notifications(): Map<String,Any>
+    @GET("api/reports") suspend fun reports(): Map<String,Any>
+    @GET("api/digest") suspend fun digest(): Map<String,Any>
+    @POST("api/email/send") suspend fun sendEmail(@Body b:Map<String,String?>): Map<String,Any>
+    @GET("api/email/inbox") suspend fun inbox(): Map<String,Any>
+    @GET("api/search") suspend fun search(@Query("q") q:String): Map<String,Any>
 }
 
 object Api {

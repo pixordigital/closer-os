@@ -20,7 +20,7 @@ export default async function TasksPage({ searchParams }: { searchParams: Promis
     ...(q ? { title: { contains: q, mode: "insensitive" as const } } : {}),
   };
 
-  const [items, total] = await Promise.all([
+  const [items, total, members] = await Promise.all([
     prisma.task.findMany({
       where: where as never,
       orderBy: { createdAt: "desc" },
@@ -29,7 +29,9 @@ export default async function TasksPage({ searchParams }: { searchParams: Promis
       include: { deal: { select: { id: true, name: true } } },
     }),
     prisma.task.count({ where: where as never }),
+    prisma.membership.findMany({ where:{ organizationId }, include:{ user:{ select:{ id:true, name:true } } } }),
   ]);
+  const memberMap = new Map(members.map(m=>[m.user.id, m.user.name]));
 
   return (
     <div className="p-6 sm:p-8">
@@ -48,14 +50,15 @@ export default async function TasksPage({ searchParams }: { searchParams: Promis
       <div className="mt-6 overflow-x-auto rounded-lg border border-zinc-800">
         <table className="w-full text-sm">
           <thead className="bg-zinc-900 text-xs uppercase tracking-wide text-zinc-400">
-            <tr><th className="px-4 py-2 text-left">Task</th><th className="px-4 py-2 text-left">Deal</th><th className="px-4 py-2 text-left">Status</th><th className="px-4 py-2 text-left">Vencimento</th></tr>
+            <tr><th className="px-4 py-2 text-left">Task</th><th className="px-4 py-2 text-left">Deal</th><th className="px-4 py-2 text-left">Responsável</th><th className="px-4 py-2 text-left">Status</th><th className="px-4 py-2 text-left">Vencimento</th></tr>
           </thead>
           <tbody className="divide-y divide-zinc-800">
-            {items.length===0 && <tr><td colSpan={4} className="px-4 py-8 text-center text-zinc-500">Nenhuma task.</td></tr>}
+            {items.length===0 && <tr><td colSpan={5} className="px-4 py-8 text-center text-zinc-500">Nenhuma task.</td></tr>}
             {items.map(t=>(
               <tr key={t.id} className="hover:bg-zinc-900/60">
                 <td className="px-4 py-3 font-medium text-zinc-100"><Link href={`/tasks/${t.id}/edit`} className="hover:underline">{t.title}</Link></td>
                 <td className="px-4 py-3 text-zinc-400">{t.deal ? <Link href={`/deals/${t.deal.id}`} className="hover:underline">{t.deal.name}</Link> : "—"}</td>
+                <td className="px-4 py-3 text-zinc-400">{(t as unknown as {assigneeId?:string}).assigneeId ? (memberMap.get((t as unknown as {assigneeId:string}).assigneeId) ?? (t as unknown as {assigneeId:string}).assigneeId.slice(0,8)) : "—"}</td>
                 <td className="px-4 py-3"><Badge>{t.status}</Badge></td>
                 <td className="px-4 py-3 text-zinc-400">{t.dueDate ? new Date(t.dueDate).toLocaleDateString("pt-BR") : "—"}</td>
               </tr>

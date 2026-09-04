@@ -1,7 +1,7 @@
 import { z } from "zod";
 
-export const integrationKindEnum = z.enum(["calendar", "transcript", "crm"]);
-export const integrationProviderEnum = z.enum(["mock-calendar", "mock-transcript", "google-calendar"]);
+export const integrationKindEnum = z.enum(["calendar", "transcript", "crm", "email"]);
+export const integrationProviderEnum = z.enum(["mock-calendar", "mock-transcript", "google-calendar", "mock-email", "gmail"]);
 
 export const integrationCreateSchema = z.object({
   provider: integrationProviderEnum,

@@ -56,3 +56,4 @@ android-native/local.properties
 android-native/build
 android-native/.gradle
 android-native/app/build
+/public/uploads/

@@ -34,6 +34,10 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       const deal = await prisma.deal.findFirst({ where: { id: parsed.data.dealId, organizationId } });
       if (!deal) return NextResponse.json({ error: "Deal not found" }, { status: 404 });
     }
+    if ((parsed.data as Record<string,unknown>).assigneeId) {
+      const mem=await prisma.membership.findFirst({ where:{ userId: parsed.data.assigneeId as string, organizationId }});
+      if(!mem) return NextResponse.json({ error:"Assignee não pertence à organização" }, { status:400 });
+    }
     const updated = await prisma.task.update({ where: { id }, data: parsed.data as never });
     await auditLog({ organizationId, userId, action: "task.updated", entityType: "Task", entityId: id });
     return NextResponse.json(updated);
