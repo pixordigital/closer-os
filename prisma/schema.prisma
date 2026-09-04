@@ -232,8 +232,6 @@ model Company {
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   contacts     Contact[]
   deals        Deal[]
-  accountHealth   AccountHealth?
-  expansionPlaybooks ExpansionPlaybook[]
 
   @@index([organizationId])
   @@index([name])
