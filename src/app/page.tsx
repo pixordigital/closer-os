@@ -100,9 +100,9 @@ export default async function Home(){
 
       <section className="hero">
         <div className="hero-inner">
-          <div className="badge">✨ <b>Novo:</b> Apps Android/iOS + Stealth Granola + Agentes autônomos</div>
+          <div className="badge">✨ <b>Novo:</b> Apps Android/iOS + Stealth Granola + Agentes autônomos + Pipeline nativo</div>
           <h1>Vendas que <span>aprendem sozinhas</span></h1>
-          <p>Closer OS agora é mobile-first, invisível e autônomo: capta Meet/Zoom sem bot visível, alimenta pipeline e follow-ups sozinho e só pede seu OK quando importa. LiteLLM integrado, sem deploy separado.</p>
+          <p>Closer OS é mobile-first, invisível e autônomo: capta Meet/Zoom sem bot visível, alimenta pipeline e follow-ups sozinho e só pede seu OK quando importa. LiteLLM integrado, APK real 4MB, sem deploy separado.</p>
           <div className="hero-actions">
             <Link href="/register" className="btn-primary">Criar conta grátis →</Link>
             <a href="#novidades" className="btn-ghost">Ver novidades</a>
@@ -163,6 +163,9 @@ export default async function Home(){
             <div className="bento-card"><div className="icon">🎙️</div><h3>Live Coach invisível</h3><p>Meet/Zoom com 100% controles via extensão (desktop) ou WebView nativo (mobile). Coach sugere em &lt;500ms.</p></div>
             <div className="bento-card"><div className="icon">🎭</div><h3>Roleplay 12 personas</h3><p>7 níveis + BOSS, hidden context e performance coach que recomenda treino específico.</p></div>
             <div className="bento-card"><div className="icon">📚</div><h3>Dicionário vivo</h3><p>Transcreve, mapeia e alimenta dashboard das objeções mais comuns.</p></div>
+            <div className="bento-card"><div className="icon">📋</div><h3>Pipeline nativo + Kanban</h3><p>Deals, stages, gate de estágio com validação, lostReason obrigatório — sem planilha paralela.</p></div>
+            <div className="bento-card"><div className="icon">📅</div><h3>Today / My Day</h3><p>View acionável: overdue, hoje, sem next step, deals parados — abre direto no que importa.</p></div>
+            <div className="bento-card"><div className="icon">📈</div><h3>Relatórios operacionais</h3><p>Funnel conversão, ciclo médio, win rate, motivos de perda — gestor cobra com dados.</p></div>
           </div>
           <div className="integrations">
             <span className="chip">🎥 Meet</span><span className="chip">🔵 Zoom</span><span className="chip">💬 Evolution API</span><span className="chip">📧 Sequência 3 toques</span><span className="chip">📅 Google Calendar</span><span className="chip">🤖 Whisper</span>
