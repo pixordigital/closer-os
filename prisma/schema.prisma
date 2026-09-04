@@ -142,6 +142,73 @@ enum ROIScenario {
   OPTIMISTIC
 }
 
+enum ForecastCategory {
+  PIPELINE
+  COMMIT
+  BEST_CASE
+  UPSIDE
+  CLOSED_WON
+  CLOSED_LOST
+}
+
+enum StakeholderRole {
+  CHAMPION
+  ECONOMIC_BUYER
+  TECHNICAL_BUYER
+  USER_BUYER
+  INFLUENCER
+  BLOCKER
+  LEGAL_PROCUREMENT
+  EXECUTIVE_SPONSOR
+}
+
+enum StakeholderInfluence {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum StakeholderSentiment {
+  POSITIVE
+  NEUTRAL
+  NEGATIVE
+  UNKNOWN
+}
+
+enum MAPItemStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLETED
+  BLOCKED
+  CANCELLED
+}
+
+enum ProcurementStatus {
+  NOT_STARTED
+  QUESTIONNAIRE_SENT
+  QUESTIONNAIRE_RECEIVED
+  SECURITY_REVIEW
+  LEGAL_REVIEW
+  APPROVED
+  REJECTED
+}
+
+enum CertificationStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  PASSED
+  FAILED
+  EXPIRED
+}
+
+enum HealthScoreTier {
+  HEALTHY
+  AT_RISK
+  CRITICAL
+  CHURNED
+}
+
 // ── Auth / Multi-tenant (§10) ───────────────────────────────────
 
 model User {
@@ -159,6 +226,7 @@ model User {
   trainingPlans    TrainingPlan[]
   activities       Activity[]
   auditLogs        AuditLog[]
+  certifications   Certification[]
 }
 
 model Organization {
@@ -193,6 +261,15 @@ model Organization {
   quotas                 Quota[]
   proposals              Proposal[]
   aiConfig               AIConfig?
+  forecastSnapshots      ForecastSnapshot[]
+  stakeholders           Stakeholder[]
+  mapItems               MAPItem[]
+  procurementChecklists  ProcurementChecklist[]
+  callClips              CallClip[]
+  scorecardTemplates     ScorecardTemplate[]
+  certifications         Certification[]
+  accountHealth          AccountHealth[]
+  expansionPlaybooks     ExpansionPlaybook[]
 
   @@index([slug])
 }
@@ -232,6 +309,8 @@ model Company {
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   contacts     Contact[]
   deals        Deal[]
+  accountHealth   AccountHealth?
+  expansionPlaybooks ExpansionPlaybook[]
 
   @@index([organizationId])
   @@index([name])
@@ -941,4 +1020,201 @@ model AIConfig {
   updatedAt      DateTime @updatedAt
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+}
+
+// ── Forecast / Waterfall (Phase 1) ─────────────────────────────────
+model ForecastSnapshot {
+  id             String   @id @default(cuid())
+  organizationId String
+  userId         String? // null = org level
+  period         String   // YYYY-MM
+  category       ForecastCategory
+  amount         Decimal  @db.Decimal(14, 2)
+  dealsCount     Int
+  createdAt      DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, userId, period, category])
+  @@index([organizationId])
+  @@index([period])
+}
+
+// ── Stakeholder Map + MAP Buyer Portal (Phase 2) ───────────────────
+model Stakeholder {
+  id             String              @id @default(cuid())
+  organizationId String
+  dealId         String
+  contactId      String?
+  name           String
+  title          String?
+  email          String?
+  phone          String?
+  role           StakeholderRole
+  influence      StakeholderInfluence @default(MEDIUM)
+  sentiment      StakeholderSentiment @default(UNKNOWN)
+  isChampion     Boolean             @default(false)
+  isDecisionMaker Boolean            @default(false)
+  notes          String?             @db.Text
+  lastEngagement DateTime?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  deal         Deal         @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  contact      Contact?     @relation(fields: [contactId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId])
+  @@index([dealId])
+}
+
+// ── MAP Items ──────────────────────────────────────────────────────
+model MAPItem {
+  id             String         @id @default(cuid())
+  organizationId String
+  dealId         String
+  title          String
+  description    String?        @db.Text
+  owner          String?        // buyer-side owner name
+  ownerEmail     String?
+  dueDate        DateTime?
+  status         MAPItemStatus  @default(NOT_STARTED)
+  order          Int            @default(0)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  deal         Deal         @relation(fields: [dealId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([dealId])
+}
+
+// ── Procurement Checklist ──────────────────────────────────────────
+model ProcurementChecklist {
+  id                 String            @id @default(cuid())
+  organizationId     String
+  dealId             String            @unique
+  questionnaireSent  Boolean           @default(false)
+  questionnaireReceived Boolean        @default(false)
+  securityReview     Boolean           @default(false)
+  legalReview        Boolean           @default(false)
+  status             ProcurementStatus @default(NOT_STARTED)
+  notes              String?           @db.Text
+  submittedAt        DateTime?
+  approvedAt         DateTime?
+  rejectedAt         DateTime?
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  deal         Deal         @relation(fields: [dealId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([dealId])
+}
+
+// ── Semantic Call Library + Clips + Certifications (Phase 3) ───────
+model CallClip {
+  id             String   @id @default(cuid())
+  organizationId String
+  callId         String
+  userId         String // creator
+  title          String
+  startTime      Int    // seconds from call start
+  endTime        Int    // seconds from call start
+  transcript     String @db.Text
+  tags           String[] // objection category, skill, etc.
+  isPublic       Boolean @default(false) // shared with team
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  call         Call         @relation(fields: [callId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([callId])
+  @@index([userId])
+  @@index([tags])
+}
+
+model ScorecardTemplate {
+  id             String   @id @default(cuid())
+  organizationId String
+  name           String
+  description    String?  @db.Text
+  criteria       Json     // [{ skill, weight, description, minScore }]
+  isDefault      Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+}
+
+model Certification {
+  id             String              @id @default(cuid())
+  organizationId String
+  userId         String
+  name           String
+  description    String?             @db.Text
+  templateId     String?
+  status         CertificationStatus @default(NOT_STARTED)
+  score          Int?
+  passedAt       DateTime?
+  expiresAt      DateTime?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  template     ScorecardTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId])
+  @@index([userId])
+}
+
+// ── Customer Success / Health Score (Phase 4) ──────────────────────
+model AccountHealth {
+  id                 String           @id @default(cuid())
+  organizationId     String
+  companyId          String           @unique
+  overallScore       Int              // 0-100
+  tier               HealthScoreTier  @default(HEALTHY)
+  adoptionScore      Int?             // 0-100
+  engagementScore    Int?             // 0-100
+  supportScore       Int?             // 0-100
+  npsScore           Int?             // -100 to 100
+  lastLoginDays      Int?
+  lastTouchDays      Int?
+  openTickets        Int?
+  churnRisk          Float?           // 0-1
+  expansionPotential Float?           // 0-1
+  signals            Json?            // [{ type, value, date, source }]
+  calculatedAt       DateTime         @default(now())
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  company      Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+}
+
+model ExpansionPlaybook {
+  id             String   @id @default(cuid())
+  organizationId String
+  name           String
+  trigger        String // e.g. "high_adoption_low_usage", "contract_renewal_90d"
+  conditions     Json   // [{ field, op, value }]
+  steps          Json   // [{ action, templateId, delayDays, ownerRole }]
+  isActive       Boolean @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([trigger])
 }

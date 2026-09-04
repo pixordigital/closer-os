@@ -56,5 +56,17 @@ export async function POST(req: Request) {
   }
   const task = await prisma.task.create({ data: { organizationId, ...parsed.data } as never });
   await auditLog({ organizationId, userId, action: "task.created", entityType: "Task", entityId: task.id });
+  if (parsed.data.dueDate) {
+    try {
+      const conn = await prisma.integrationConnection.findFirst({ where: { organizationId, provider: "google-calendar", status: "connected" } });
+      if (conn) {
+        const { GoogleCalendarProvider } = await import("@/lib/integrations/providers/googleCalendar");
+        const p = new GoogleCalendarProvider();
+        const start = new Date(parsed.data.dueDate);
+        const end = new Date(start.getTime() + 30 * 60000);
+        await p.createEvent(conn.config as never, { summary: parsed.data.title, description: parsed.data.description ?? undefined, start: start.toISOString(), end: end.toISOString() }).catch(() => {});
+      }
+    } catch {}
+  }
   return NextResponse.json(task, { status: 201 });
 }

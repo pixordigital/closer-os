@@ -1,0 +1,11 @@
+{
+  "manifest_version": 3,
+  "name": "Closer OS — Stealth Capture",
+  "version": "0.1.0",
+  "description": "Captura invisível Meet/Zoom via getDisplayMedia → Whisper",
+  "permissions": ["storage", "activeTab", "scripting"],
+  "host_permissions": ["https://meet.google.com/*", "https://*.zoom.us/*", "http://178.105.181.38:6002/*", "http://localhost:3000/*"],
+  "action": { "default_title": "Closer OS" },
+  "background": { "service_worker": "background.js" },
+  "content_scripts": [{ "matches": ["https://meet.google.com/*", "https://*.zoom.us/*"], "js": ["content.js"], "run_at": "document_idle" }]
+}

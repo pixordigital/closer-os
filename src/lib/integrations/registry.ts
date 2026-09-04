@@ -3,6 +3,8 @@ import { MockCalendarProvider, MockTranscriptProvider } from "./providers/mock";
 import { GoogleCalendarStub } from "./providers/googleCalendarStub";
 import { MockEmailProvider } from "./providers/email";
 import { GmailProvider } from "./providers/gmail";
+import { RDStationProvider } from "./providers/rdStation";
+import { GoogleCalendarProvider } from "./providers/googleCalendar";
 
 const registry = new Map<string, IntegrationProvider>();
 
@@ -13,6 +15,8 @@ function ensureDefaults() {
     registerIntegration(new GoogleCalendarStub());
     registerIntegration(new MockEmailProvider());
     registerIntegration(new GmailProvider());
+    registerIntegration(new RDStationProvider());
+    registerIntegration(new GoogleCalendarProvider());
   }
 }
 
