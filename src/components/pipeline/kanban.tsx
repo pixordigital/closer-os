@@ -70,7 +70,7 @@ export function Kanban({ initialDeals }: { initialDeals: Deal[] }) {
         <span>{deals.length} deals</span><span>·</span><span>{fmtBRL(totalValue)} total</span>
         {isPending && <span className="text-zinc-500">salvando…</span>}
       </div>
-      <div className="flex gap-3 overflow-x-auto pb-4">
+      <div className="grid grid-cols-3 gap-4">
         {byStage.map(col => {
           const colValue = col.items.reduce((a,d)=>a+(d.value??0),0);
           return (
@@ -84,7 +84,7 @@ export function Kanban({ initialDeals }: { initialDeals: Deal[] }) {
                   if(id) moveStage(id, col.stage);
                   setDragId(null); setOverStage(null);
                 }}
-                className={`flex w-[260px] shrink-0 flex-col rounded-lg border bg-zinc-900 ${STAGE_COLOR[col.stage]} ${overStage===col.stage ? "ring-2 ring-sky-500/50 bg-zinc-900/80" : ""}`}>
+                className={`flex min-h-[280px] flex-col rounded-lg border bg-zinc-900 ${STAGE_COLOR[col.stage]} ${overStage===col.stage ? "ring-2 ring-sky-500/50 bg-zinc-900/80" : ""}`}>
               <div className="flex items-center justify-between border-b border-zinc-800 px-3 py-2">
                 <span className="text-xs font-semibold uppercase tracking-wide text-zinc-200">{STAGE_LABEL[col.stage]}</span>
                 <Badge>{col.items.length}</Badge>
