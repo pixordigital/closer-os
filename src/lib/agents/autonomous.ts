@@ -37,10 +37,9 @@ export async function runHygieneAgent(organizationId:string, payload:{callId:str
       await logAIUsage({ organizationId, provider: prov.name, model, operation:"generateStructured", agent:"HygieneAgent", latencyMs: Date.now()-t0, estimatedCost: estimateCost(model,null,null)}).catch(()=>{});
     }
   }catch{}
-  const proposals: unknown[] = [];
   if(dealId){
     const { health } = await getDiscoveryWithHealth(dealId);
-    proposals.push({ type:"discovery", health, dealId });
+    // discovery health tracked, no proposals array needed
   }
   for(const o of objs){
     const exists = await prisma.aIRecommendation.findFirst({ where:{ organizationId, type:"hygiene_proposal", title: o.content.slice(0,120) } });
@@ -52,7 +51,7 @@ export async function runHygieneAgent(organizationId:string, payload:{callId:str
     const dup = await prisma.objection.findFirst({ where:{ organizationId, callId:call.id, content:o.content } });
     if(!dup) await prisma.objection.create({ data:{ organizationId, callId:call.id, dealId: dealId ?? undefined, category:o.category as never, content:o.content } });
   }
-  return { agent:"hygiene", objections: objs.length, proposals };
+  return { agent:"hygiene", objections: objs.length };
 }
 
 export async function runPipelineAgent(organizationId:string, payload:{callId?:string, dealId?:string}){

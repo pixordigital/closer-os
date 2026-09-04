@@ -13,14 +13,13 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
   if (role === "MEMBER") ownerId = userId;
   const whereOwner = ownerId ? { organizationId, ownerId } : { organizationId };
 
-  const [byStage, total, won, lost, dealsWon, lostReasons, quotas] = await Promise.all([
+  const [byStage, total, won, lost, dealsWon, lostReasons] = await Promise.all([
     prisma.deal.groupBy({ by:["stage"], where: whereOwner, _count:{ stage:true }, _sum:{ value:true } }),
     prisma.deal.count({ where: whereOwner }),
     prisma.deal.count({ where:{ organizationId, ...(ownerId ? { ownerId } : {}), stage:"WON" as never } }),
     prisma.deal.count({ where:{ organizationId, ...(ownerId ? { ownerId } : {}), stage:"LOST" as never } }),
     prisma.deal.findMany({ where:{ organizationId, ...(ownerId ? { ownerId } : {}), stage:"WON" as never }, select:{ createdAt:true, updatedAt:true } }),
     prisma.deal.groupBy({ by:["lostReason"], where:{ organizationId, ...(ownerId ? { ownerId } : {}), stage:"LOST" as never, lostReason:{ not: null as never } }, _count:{ lostReason:true } }),
-    prisma.quota.findMany({ where: whereOwner as never, orderBy:{ period:"desc" }, take: 12 }),
   ]);
   const stageOrder=["LEAD","QUALIFIED","DISCOVERY","SOLUTION","PROPOSAL","NEGOTIATION","VERBAL_COMMITMENT","WON","LOST"];
   const sorted=[...byStage].sort((a,b)=> stageOrder.indexOf(a.stage as string)-stageOrder.indexOf(b.stage as string));
@@ -29,14 +28,11 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
   const winRate=closed?Math.round(won/closed*100):0;
   let avgCycle:number|null=null;
   if(dealsWon.length){ const d=dealsWon.map(x=>(new Date((x as {updatedAt:Date}).updatedAt).getTime()-new Date((x as {createdAt:Date}).createdAt).getTime())/86400000); avgCycle=Math.round(d.reduce((a,b)=>a+b,0)/d.length); }
-  const period = new Date().toISOString().slice(0,7);
-  const quotaNow = quotas.find(q=> (q as {period:string}).period===period) as {target:unknown} | undefined;
   const forecastDeals = await prisma.deal.findMany({ where:{ organizationId, ...(ownerId ? { ownerId } : {}), stage:{ notIn:["WON","LOST"] as never } } as never, select:{ value:true, probability:true } });
   const forecast = forecastDeals.reduce((a, d)=> a + Number((d as {value:unknown}).value ?? 0)*(((d as {probability:number|null}).probability ?? 30)/100),0);
-  const quotaPct = quotaNow ? Math.round(forecast / Number(quotaNow.target as unknown as string) * 100) : null;
 
   // per-closer table for gestores
-  let perCloser: Array<{ ownerId:string; name:string; deals:number; won:number; forecast:number; quotaTarget:number|null; quotaPct:number|null }> | null = null;
+  let perCloser: Array<{ ownerId:string; name:string; deals:number; won:number; forecast:number }> | null = null;
   if (!ownerId && role !== "MEMBER") {
     const members = await prisma.membership.findMany({ where:{ organizationId }, include:{ user:{ select:{id:true,name:true}} } });
     const grouped = await prisma.deal.groupBy({ by:["ownerId"], where:{ organizationId, ownerId:{ not:null as never } } as never, _count:{ ownerId:true } });
@@ -46,10 +42,6 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
       if(!d.ownerId) continue;
       forecastBy[d.ownerId] = (forecastBy[d.ownerId]??0) + Number(d.value??0)*((d.probability??30)/100);
     }
-    const quotaBy: Record<string,number> = {};
-    for (const q of await prisma.quota.findMany({ where:{ organizationId, period } } as never) as unknown as Array<{userId:string;target:unknown}>) {
-      quotaBy[q.userId]=Number(q.target as unknown as string);
-    }
     const countMap = new Map(grouped.map(r=>[(r as {ownerId:string}).ownerId, (r as unknown as {_count:{ownerId:number}})._count.ownerId] as const));
     const wonMap = new Map(wonBy.map(r=>[(r as {ownerId:string}).ownerId, (r as unknown as {_count:{ownerId:number}})._count.ownerId] as const));
     perCloser = members.map(m=>({
@@ -58,8 +50,6 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
       deals: countMap.get(m.userId) ?? 0,
       won: wonMap.get(m.userId) ?? 0,
       forecast: Math.round(forecastBy[m.userId] ?? 0),
-      quotaTarget: quotaBy[m.userId] ?? null,
-      quotaPct: quotaBy[m.userId] ? Math.round((forecastBy[m.userId]??0)/quotaBy[m.userId]*100) : null,
     }));
   }
 
@@ -87,23 +77,9 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
         <Card k="Total deals" v={String(total)} />
         <Card k="Win rate" v={`${winRate}%`} sub={`${won} Won · ${lost} Lost`} />
         <Card k="Ciclo médio" v={avgCycle!=null?`${avgCycle}d`:"—"} sub="LEAD→WON" />
-        <Card k="Forecast" v={new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"}).format(forecast)} sub={quotaNow ? `Quota ${period}: ${new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"}).format(Number(quotaNow.target as unknown as string))} · ${quotaPct}%` : `Quota ${period}: —`} />
+        <Card k="Forecast" v={new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"}).format(forecast)} />
         <Card k="Perdidos" v={String(lost)} sub={lost?`${Math.round(lost/Math.max(1,total)*100)}%`:"—"} />
       </div>
-
-      {perCloser && (
-        <section className="rounded-xl border border-zinc-800 bg-zinc-900 p-4">
-          <h2 className="font-medium">Por closer — Forecast vs Quota ({period})</h2>
-          <div className="mt-3 overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="text-xs uppercase tracking-wide text-zinc-500"><tr><th className="px-2 py-1 text-left">Closer</th><th className="px-2 py-1 text-right">Deals</th><th className="px-2 py-1 text-right">Won</th><th className="px-2 py-1 text-right">Forecast</th><th className="px-2 py-1 text-right">Quota</th><th className="px-2 py-1 text-right">%</th></tr></thead>
-              <tbody className="divide-y divide-zinc-800">{perCloser.map(r=>(
-                <tr key={r.ownerId} className="hover:bg-zinc-800/50"><td className="px-2 py-2 text-zinc-200"><Link href={`/reports?ownerId=${r.ownerId}`} className="hover:underline">{r.name}</Link></td><td className="px-2 py-2 text-right">{r.deals}</td><td className="px-2 py-2 text-right">{r.won}</td><td className="px-2 py-2 text-right">{new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"}).format(r.forecast)}</td><td className="px-2 py-2 text-right">{r.quotaTarget!=null?new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"}).format(r.quotaTarget):"—"}</td><td className={`px-2 py-2 text-right font-medium ${r.quotaPct!=null && r.quotaPct>=100 ? "text-emerald-400" : r.quotaPct!=null && r.quotaPct<50 ? "text-amber-400" : "text-zinc-400"}`}>{r.quotaPct!=null?`${r.quotaPct}%`:"—"}</td></tr>
-              ))}</tbody>
-            </table>
-          </div>
-        </section>
-      )}
 
       <section className="rounded-xl border border-zinc-800 bg-zinc-900 p-4">
         <h2 className="font-medium">Funnel por estágio</h2>

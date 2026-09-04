@@ -257,9 +257,6 @@ model Organization {
   webhookEndpoints       WebhookEndpoint[]
   automationRules        AutomationRule[]
   integrationConnections IntegrationConnection[]
-  products               Product[]
-  quotas                 Quota[]
-  proposals              Proposal[]
   aiConfig               AIConfig?
   forecastSnapshots      ForecastSnapshot[]
   stakeholders           Stakeholder[]
@@ -381,7 +378,6 @@ model Deal {
   tasks                Task[]
   roiModels            ROIModel[]
   aiInsights           AIInsight[]
-  proposals            Proposal[]
   Stakeholder          Stakeholder[]
   MAPItem              MAPItem[]
   ProcurementChecklist ProcurementChecklist?
@@ -927,72 +923,6 @@ model AutomationRun {
 
   @@index([ruleId])
   @@index([organizationId])
-}
-
-// ── Catalog / Quotas / Proposals (F1 robustez) ─────────────────
-model Product {
-  id             String   @id @default(cuid())
-  organizationId String
-  name           String
-  sku            String?
-  description    String?  @db.Text
-  price          Decimal  @db.Decimal(14, 2)
-  currency       String   @default("BRL")
-  active         Boolean  @default(true)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-
-  @@index([organizationId])
-  @@index([active])
-  @@index([sku])
-}
-
-model Quota {
-  id             String   @id @default(cuid())
-  organizationId String
-  userId         String
-  period         String // YYYY-MM
-  target         Decimal  @db.Decimal(14, 2)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-
-  @@unique([organizationId, userId, period])
-  @@index([organizationId])
-  @@index([userId])
-}
-
-model Proposal {
-  id             String    @id @default(cuid())
-  organizationId String
-  dealId         String
-  createdBy      String?
-  token          String    @unique
-  status         String    @default("DRAFT") // DRAFT | SENT | VIEWED | ACCEPTED | REJECTED | EXPIRED
-  title          String
-  html           String?   @db.Text
-  items          Json? // [{ name, qty, unitPrice, total }]
-  total          Decimal?  @db.Decimal(14, 2)
-  currency       String    @default("BRL")
-  expiresAt      DateTime?
-  viewedAt       DateTime?
-  viewedCount    Int       @default(0)
-  acceptedAt     DateTime?
-  acceptedIp     String?
-  rejectedAt     DateTime?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
-
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  deal         Deal         @relation(fields: [dealId], references: [id], onDelete: Cascade)
-
-  @@index([organizationId])
-  @@index([dealId])
-  @@index([token])
-  @@index([status])
 }
 
 // ── Integrations §85 (Phase 11) ───────────────────────────────

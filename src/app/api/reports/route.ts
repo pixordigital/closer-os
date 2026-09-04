@@ -12,7 +12,7 @@ export async function GET(req: Request) {
   const role = await getOrgRole(userId, organizationId);
   if (role === "MEMBER") ownerId = userId;
   const whereOwner = ownerId ? { organizationId, ownerId } : { organizationId };
-  const [byStage, total, won, lost, dealsWon, lostReasons, activities, quotasRaw] = await Promise.all([
+  const [byStage, total, won, lost, dealsWon, lostReasons, activities, forecastRaw] = await Promise.all([
     prisma.deal.groupBy({ by:["stage"], where: whereOwner, _count:{ stage:true }, _sum:{ value:true } }),
     prisma.deal.count({ where: whereOwner }),
     prisma.deal.count({ where:{ organizationId, ...(ownerId ? { ownerId } : {}), stage:"WON" as never } }),
@@ -43,7 +43,7 @@ export async function GET(req: Request) {
   }
 
   const lostByReason = lostReasons.map(r=>({ reason: (r.lostReason as string) ?? "—", count: (r as unknown as {_count:{lostReason:number}})._count.lostReason }));
-  const forecastWeighted = quotasRaw.reduce((a,d)=> a + Number((d as {value:unknown}).value ?? 0) * (((d as {probability:number|null}).probability ?? 30)/100),0);
+  const forecastWeighted = forecastRaw.reduce((a,d)=> a + Number((d as {value:unknown}).value ?? 0) * (((d as {probability:number|null}).probability ?? 30)/100),0);
 
   // per-closer breakdown (only when not filtered to single owner)
   let perCloser: Array<{ ownerId: string; name: string; email: string; deals: number; won: number; forecast: number }> | null = null;
@@ -53,7 +53,7 @@ export async function GET(req: Request) {
     const wonBy = await prisma.deal.groupBy({ by:["ownerId"], where:{ organizationId, stage:"WON" as never } as never, _count:{ ownerId:true }, _sum:{ value:true } });
     const wonMap = new Map(wonBy.map(r=>[(r as {ownerId:string}).ownerId, r] as const));
     const forecastBy: Record<string,number> = {};
-    for (const d of quotasRaw as unknown as Array<{ownerId:string|null;value:unknown;probability:number|null}>) {
+    for (const d of forecastRaw as unknown as Array<{ownerId:string|null;value:unknown;probability:number|null}>) {
       if(!d.ownerId) continue;
       forecastBy[d.ownerId] = (forecastBy[d.ownerId]??0) + Number(d.value ?? 0)*((d.probability??30)/100);
     }

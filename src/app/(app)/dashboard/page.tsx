@@ -44,8 +44,6 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const stageOrder=["LEAD","QUALIFIED","DISCOVERY","SOLUTION","PROPOSAL","NEGOTIATION","VERBAL_COMMITMENT","WON","LOST"];
   const pipelineSorted=[...pipeline].sort((a,b)=>stageOrder.indexOf(a.stage as string)-stageOrder.indexOf(b.stage as string));
   const period=new Date().toISOString().slice(0,7);
-  const quotaNow = await prisma.quota.findFirst({ where:{ organizationId, period, ...(ownerId ? { userId: ownerId } : {}) } as never, select:{ target:true } }).catch(()=>null) as {target:unknown}|null;
-  const quotaPct = quotaNow ? Math.round(forecast/Number(quotaNow.target as unknown as string)*100) : null;
   const memberNameMap=new Map(members.map(m=>[m.userId, m.user.name]));
   const rankingSorted=[...ranking].filter(r=>r.ownerId).sort((a,b)=>(b._count.ownerId??0)-(a._count.ownerId??0)).slice(0,5);
   const wonCount=wonLost.find(w=>w.stage==="WON")?._count.stage ?? 0;
@@ -80,7 +78,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-5"><p className="text-xs uppercase tracking-wide text-zinc-500">{tr("dashboard.pipeline")}</p><p className="mt-1 text-xl font-semibold">{fmt(pipelineValue,"BRL",locale)}</p><p className="text-xs text-zinc-500">{dealsTotal} deals</p></div>
-        <div className="rounded-xl border border-emerald-900/30 bg-emerald-950/20 p-5"><p className="text-xs uppercase tracking-wide text-zinc-500">Forecast (weighted)</p><p className="mt-1 text-xl font-semibold text-emerald-400">{fmt(forecast,"BRL",locale)}</p><p className="text-xs text-zinc-500">{quotaNow ? `Quota ${period} ${fmt(Number(quotaNow.target as unknown as string),"BRL",locale)} · ${quotaPct}%` : "prob. médio"}</p></div>
+        <div className="rounded-xl border border-emerald-900/30 bg-emerald-950/20 p-5"><p className="text-xs uppercase tracking-wide text-zinc-500">Forecast (weighted)</p><p className="mt-1 text-xl font-semibold text-emerald-400">{fmt(forecast,"BRL",locale)}</p><p className="text-xs text-zinc-500">prob. médio</p></div>
         <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-5"><p className="text-xs uppercase tracking-wide text-zinc-500">{tr("dashboard.companies")}</p><p className="mt-1 text-xl font-semibold">{companies}</p><p className="text-xs text-zinc-500">{locale==="en"?"active accounts":"contas ativas"}</p></div>
         <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-5"><p className="text-xs uppercase tracking-wide text-zinc-500">{tr("dashboard.calls")}</p><p className="mt-1 text-xl font-semibold">{callsTotal}</p><p className="text-xs text-zinc-500">{locale==="en"?"total recorded":"total gravadas"}</p></div>
         <div className={`rounded-xl border p-5 ${tasksOverdue>0?"border-amber-900/50 bg-amber-950/20":"border-zinc-800 bg-zinc-900"}`}><p className="text-xs uppercase tracking-wide text-zinc-500">{tr("dashboard.tasks")}</p><p className="mt-1 text-xl font-semibold">{tasksTodo} <span className="text-sm font-normal text-zinc-500">{tr("dashboard.pending")}</span></p><p className="text-xs text-amber-400">{tasksOverdue>0?`${tasksOverdue} ${tr("dashboard.overdue")}`: tr("dashboard.onTime")}</p></div>
