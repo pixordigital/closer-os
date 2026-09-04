@@ -6,6 +6,8 @@ import { auditLog } from "@/lib/audit";
 import { fireTriggers } from "@/lib/triggers";
 import { validateStageGate } from "@/lib/stage-gates";
 import { computeHealth } from "@/lib/discovery";
+import { getOrgRole } from "@/lib/permissions";
+import { enqueueJob } from "@/lib/jobs";
 
 async function getScoped(id: string, organizationId: string) {
   const d = await prisma.deal.findFirst({ where: { id, organizationId } });
@@ -15,10 +17,11 @@ async function getScoped(id: string, organizationId: string) {
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { organizationId } = await requireTenant();
+  const { organizationId, userId } = await requireTenant();
   try {
+    const role = await getOrgRole(userId, organizationId);
     const deal = await prisma.deal.findFirst({
-      where: { id, organizationId },
+      where: { id, organizationId, ...(role === "MEMBER" ? { ownerId: userId } : {}) } as never,
       include: {
         company: { select: { id: true, name: true, website: true, industry: true } },
         primaryContact: true,
@@ -37,10 +40,16 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   const { organizationId, userId } = await requireTenant();
   try {
     const current = await getScoped(id, organizationId);
+    const role = await getOrgRole(userId, organizationId);
+    if (role === "MEMBER" && (current as { ownerId?: string | null }).ownerId && (current as { ownerId: string }).ownerId !== userId) {
+      return NextResponse.json({ error: "Forbidden — deal pertence a outro closer" }, { status: 403 });
+    }
     const body = await req.json().catch(() => null);
     const parsed = dealUpdateSchema.safeParse(body);
     if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
-    // Validate FKs if changed
+    if (role === "MEMBER" && parsed.data.ownerId && (parsed.data.ownerId as string) !== userId) {
+      return NextResponse.json({ error: "MEMBER não pode reatribuir deal" }, { status: 403 });
+    }
     if (parsed.data.companyId) {
       const c = await prisma.company.findFirst({ where: { id: parsed.data.companyId, organizationId } });
       if (!c) return NextResponse.json({ error: "Company not found" }, { status: 404 });
@@ -49,7 +58,10 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       const ct = await prisma.contact.findFirst({ where: { id: parsed.data.primaryContactId as string, organizationId } });
       if (!ct) return NextResponse.json({ error: "Contact not found" }, { status: 404 });
     }
-    // Stage gate — guard central (ponytail: 1 lugar, não em cada caller)
+    if (parsed.data.ownerId && parsed.data.ownerId !== userId) {
+      const mem = await prisma.membership.findFirst({ where: { userId: parsed.data.ownerId as string, organizationId }, select: { userId: true } });
+      if (!mem) return NextResponse.json({ error: "ownerId não pertence à organização" }, { status: 400 });
+    }
     if (parsed.data.stage && parsed.data.stage !== current.stage) {
       const merged = { ...current, ...parsed.data } as Record<string, unknown>;
       let discoveryHealth: number | undefined;
@@ -64,6 +76,11 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     await auditLog({ organizationId, userId, action: "deal.updated", entityType: "Deal", entityId: id, metadata: { fields: Object.keys(parsed.data) } });
     fireTriggers({ organizationId, event: "deal.updated", payload: { id, ...parsed.data }, idempotencyKey: `deal.updated:${id}:${Date.now()}` });
     void import("@/lib/agents/autonomous").then(m=>m.runAllAgents(organizationId,"deal.updated",{ dealId:id }).catch(()=>{}));
+    const nd = (parsed.data as { nextStepDate?: Date | null }).nextStepDate;
+    if (nd) {
+      const d = new Date(nd as unknown as string); const runAt = new Date(d); runAt.setDate(runAt.getDate()-1); runAt.setHours(9,0,0,0);
+      if (runAt.getTime() > Date.now()+60_000) void enqueueJob({ organizationId, type:"whatsapp_reminder_d1" as never, payload:{ organizationId, dealId:id }, runAt }).catch(()=>{});
+    }
     return NextResponse.json(updated);
   } catch (e: unknown) {
     const status = (e as { status?: number })?.status ?? 500;
@@ -75,7 +92,11 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
   const { id } = await params;
   const { organizationId, userId } = await requireTenant();
   try {
-    await getScoped(id, organizationId);
+    const current = await getScoped(id, organizationId);
+    const role = await getOrgRole(userId, organizationId);
+    if (role === "MEMBER" && (current as { ownerId?: string | null }).ownerId && (current as { ownerId: string }).ownerId !== userId) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
     await prisma.deal.delete({ where: { id } });
     await auditLog({ organizationId, userId, action: "deal.deleted", entityType: "Deal", entityId: id });
     return NextResponse.json({ ok: true });

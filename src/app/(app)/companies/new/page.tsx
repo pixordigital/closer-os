@@ -15,12 +15,15 @@ export default function NewCompanyPage() {
     e.preventDefault(); setErr(null); setLoading(true);
     const fd=new FormData(e.currentTarget);
     const body=Object.fromEntries([...fd.entries()].map(([k,v])=>[k,(v as string).trim()]));
-    // drop empty optional
     for(const k of Object.keys(body)) if(!body[k]) delete body[k];
     const res=await fetch("/api/companies",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
     const j=await res.json().catch(()=>({}));
     setLoading(false);
-    if(!res.ok){ setErr(JSON.stringify(j.error ?? j, null, 2)); return; }
+    if(!res.ok){
+      if(j.existingId) setErr(`${j.error ?? "Duplicata"} — já existe: /companies/${j.existingId}`);
+      else setErr(JSON.stringify(j.error ?? j, null, 2));
+      return;
+    }
     router.push(`/companies/${j.id}`); router.refresh();
   }
   return (
@@ -30,6 +33,7 @@ export default function NewCompanyPage() {
         <CardContent>
           <form onSubmit={onSubmit} className="space-y-4">
             <div className="space-y-1.5"><Label>Nome *</Label><Input name="name" required placeholder="Acme SaaS" /></div>
+            <div className="space-y-1.5"><Label>CNPJ (opcional — dedupe)</Label><Input name="cnpj" placeholder="00.000.000/0000-00" maxLength={18} /></div>
             <div className="space-y-1.5"><Label>Website</Label><Input name="website" placeholder="https://acme.com" /></div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5"><Label>Indústria</Label><Input name="industry" placeholder="SaaS" /></div>

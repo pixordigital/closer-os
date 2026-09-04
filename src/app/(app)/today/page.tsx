@@ -1,11 +1,18 @@
 import Link from "next/link";
 import { requireTenant } from "@/lib/tenant";
 import { prisma } from "@/lib/db";
+import { getOrgRole } from "@/lib/permissions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
-export default async function TodayPage() {
-  const { organizationId } = await requireTenant();
+export default async function TodayPage({ searchParams }: { searchParams: Promise<Record<string,string|undefined>> }) {
+  const { organizationId, userId } = await requireTenant();
+  const role = await getOrgRole(userId, organizationId);
+  const sp = await searchParams;
+  const mine = (sp.mine ?? "").trim().toLowerCase();
+  const scopeAll = (mine === "0" || mine === "false") && role !== "MEMBER";
+  const ownerFilter = scopeAll ? {} : { ownerId: userId } as never;
+  // Hoje por closer: MEMBER sempre scopa; ADMIN/OWNER default mine, ?mine=0 vê todos
   const now = new Date();
   const start = new Date(now); start.setHours(0,0,0,0);
   const end = new Date(now); end.setHours(23,59,59,999);
@@ -14,8 +21,8 @@ export default async function TodayPage() {
   const [overdue, dueToday, noNextStep, stale, callsToday, pendingFollowUps] = await Promise.all([
     prisma.task.findMany({ where:{ organizationId, status:{ in:["TODO","IN_PROGRESS"] as never }, dueDate:{ lt: start } }, orderBy:{ dueDate:"asc" }, take:20, include:{ deal:{ select:{ id:true, name:true } } } }),
     prisma.task.findMany({ where:{ organizationId, status:{ in:["TODO","IN_PROGRESS"] as never }, dueDate:{ gte: start, lte: end } }, orderBy:{ dueDate:"asc" }, take:20, include:{ deal:{ select:{ id:true, name:true } } } }),
-    prisma.deal.findMany({ where:{ organizationId, stage:{ notIn:["WON","LOST"] as never }, OR:[{ nextStep:null },{ nextStep:"" }] }, orderBy:{ updatedAt:"desc" }, take:20, select:{ id:true, name:true, stage:true, value:true, currency:true, company:{ select:{ name:true } } } }),
-    prisma.deal.findMany({ where:{ organizationId, stage:{ notIn:["WON","LOST"] as never }, updatedAt:{ lt: staleCut } }, orderBy:{ value:"desc" }, take:20, select:{ id:true, name:true, stage:true, value:true, currency:true, updatedAt:true, company:{ select:{ name:true } } } }),
+    prisma.deal.findMany({ where:{ organizationId, ...(ownerFilter as object), stage:{ notIn:["WON","LOST"] as never }, OR:[{ nextStep:null },{ nextStep:"" }] }, orderBy:{ updatedAt:"desc" }, take:20, select:{ id:true, name:true, stage:true, value:true, currency:true, company:{ select:{ name:true } } } }),
+    prisma.deal.findMany({ where:{ organizationId, ...(ownerFilter as object), stage:{ notIn:["WON","LOST"] as never }, updatedAt:{ lt: staleCut } }, orderBy:{ value:"desc" }, take:20, select:{ id:true, name:true, stage:true, value:true, currency:true, updatedAt:true, company:{ select:{ name:true } } } }),
     prisma.call.findMany({ where:{ organizationId, scheduledAt:{ gte: start, lte: end } }, orderBy:{ scheduledAt:"asc" }, take:20, select:{ id:true, title:true, status:true, scheduledAt:true, deal:{ select:{ id:true, name:true } } } }),
     prisma.followUp.findMany({ where:{ organizationId, status:{ in:["DRAFT","PENDING_REVIEW"] as never } }, orderBy:{ createdAt:"desc" }, take:10, include:{ deal:{ select:{ id:true, name:true } } } }),
   ]);
@@ -29,9 +36,12 @@ export default async function TodayPage() {
 
   return (
     <div className="p-6 sm:p-8 space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Hoje</h1>
-        <p className="mt-1 text-sm text-zinc-400">Seu dia em um lugar — atrasadas, hoje, sem próximo passo, paradas, calls do dia.</p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Hoje</h1>
+          <p className="mt-1 text-sm text-zinc-400">Seu dia — {role==="MEMBER" ? "seus deals" : scopeAll ? "todos closers" : "seus deals"}. Atrasadas, hoje, sem próximo passo, paradas, calls.</p>
+        </div>
+        {role!=="MEMBER" && <Link href={scopeAll ? "/today" : "/today?mine=0"} className="text-xs text-sky-400 hover:underline border border-zinc-800 rounded-md px-3 py-2">{scopeAll ? "Meus deals" : "Ver todos (gestão)"}</Link>}
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">

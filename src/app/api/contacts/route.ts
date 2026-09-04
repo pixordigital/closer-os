@@ -31,10 +31,14 @@ export async function POST(req: Request) {
   const body = await req.json().catch(() => null);
   const parsed = contactCreateSchema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
-  // Verify company belongs to org
   const company = await prisma.company.findFirst({ where: { id: parsed.data.companyId, organizationId } });
   if (!company) return NextResponse.json({ error: "Company not found in organization" }, { status: 404 });
-  const contact = await prisma.contact.create({ data: { organizationId, ...parsed.data } });
+  if (parsed.data.email) {
+    const emailLower = parsed.data.email.trim().toLowerCase();
+    const dup = await prisma.contact.findFirst({ where: { organizationId, email: { equals: emailLower, mode: "insensitive" as const } } as never, select: { id: true } });
+    if (dup) return NextResponse.json({ error: "Contato com esse email já existe", existingId: dup.id }, { status: 409 });
+  }
+  const contact = await prisma.contact.create({ data: { organizationId, ...parsed.data, ...(parsed.data.email ? { email: parsed.data.email.trim().toLowerCase() } : {}) } as never });
   await auditLog({ organizationId, userId, action: "contact.created", entityType: "Contact", entityId: contact.id });
   return NextResponse.json(contact, { status: 201 });
 }

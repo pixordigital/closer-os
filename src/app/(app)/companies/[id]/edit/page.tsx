@@ -21,7 +21,7 @@ export default function EditCompanyPage() {
       setInitial({
         name: j.name ?? "", website: j.website ?? "", industry: j.industry ?? "",
         companySize: j.companySize ?? "", location: j.location ?? "",
-        description: j.description ?? "", notes: j.notes ?? "",
+        cnpj: j.cnpj ?? "", description: j.description ?? "", notes: j.notes ?? "",
       });
     }).catch(e => setFetchErr(String(e)));
   }, [id]);
@@ -52,6 +52,7 @@ export default function EditCompanyPage() {
         <CardContent>
           <form onSubmit={onSubmit} className="space-y-4">
             <div className="space-y-1.5"><Label>Nome *</Label><Input name="name" required defaultValue={initial.name} /></div>
+            <div className="space-y-1.5"><Label>CNPJ (dedupe)</Label><Input name="cnpj" defaultValue={initial.cnpj} placeholder="00.000.000/0000-00" maxLength={18} /></div>
             <div className="space-y-1.5"><Label>Website</Label><Input name="website" defaultValue={initial.website} placeholder="https://..." /></div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5"><Label>Indústria</Label><Input name="industry" defaultValue={initial.industry} /></div>

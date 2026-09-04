@@ -4,6 +4,7 @@ import { requireTenant, parsePagination } from "@/lib/tenant";
 import { callCreateSchema } from "@/lib/validations/call";
 import { auditLog } from "@/lib/audit";
 import { fireTriggers } from "@/lib/triggers";
+import { enqueueJob } from "@/lib/jobs";
 
 export async function GET(req: Request) {
   const { organizationId } = await requireTenant();
@@ -57,5 +58,16 @@ export async function POST(req: Request) {
   });
   await auditLog({ organizationId, userId, action: "call.created", entityType: "Call", entityId: call.id });
   fireTriggers({ organizationId, event: "call.created", payload: { id: call.id, dealId: call.dealId, status: call.status }, idempotencyKey: `call.created:${call.id}` });
+  // ponytail: D-1 WhatsApp reminder — schedule runAt = scheduledAt -1d @09:00
+  const sched = (parsed.data as { scheduledAt?: Date | null }).scheduledAt;
+  if (sched) {
+    const d = new Date(sched);
+    const runAt = new Date(d);
+    runAt.setDate(runAt.getDate() - 1);
+    runAt.setHours(9, 0, 0, 0);
+    if (runAt.getTime() > Date.now() + 60_000) {
+      void enqueueJob({ organizationId, type: "whatsapp_reminder_d1" as never, payload: { organizationId, callId: call.id }, runAt }).catch(() => {});
+    }
+  }
   return NextResponse.json(call, { status: 201 });
 }

@@ -20,7 +20,7 @@ export default function EditContactPage() {
   useEffect(()=>{
     fetch(`/api/contacts/${id}`).then(r=>r.json()).then(j=>{
       if(j.error){ setFetchErr(String(j.error)); return; }
-      setInitial({ companyId:j.companyId??"", name:j.name??"", role:j.role??"", email:j.email??"", phone:j.phone??"", linkedinUrl:j.linkedinUrl??"", decisionRole:j.decisionRole??"UNKNOWN", notes:j.notes??"" });
+      setInitial({ companyId:j.companyId??"", name:j.name??"", role:j.role??"", email:j.email??"", phone:j.phone??"", linkedinUrl:j.linkedinUrl??"", decisionRole:j.decisionRole??"UNKNOWN", consentAt: j.consentAt ? String(j.consentAt).slice(0,10) : "", consentSource: j.consentSource ?? "", notes:j.notes??"" });
     }).catch(e=>setFetchErr(String(e)));
   },[id]);
 
@@ -69,6 +69,11 @@ export default function EditContactPage() {
               <div className="space-y-1.5"><Label>Telefone</Label><Input name="phone" defaultValue={initial.phone} /></div>
             </div>
             <div className="space-y-1.5"><Label>LinkedIn</Label><Input name="linkedinUrl" defaultValue={initial.linkedinUrl} placeholder="https://linkedin.com/in/..." /></div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5"><Label>Consent at</Label><Input name="consentAt" type="date" defaultValue={initial.consentAt ? String(initial.consentAt).slice(0,10) : ""} /></div>
+              <div className="space-y-1.5"><Label>Consent source</Label><Input name="consentSource" defaultValue={initial.consentSource} placeholder="form, call" maxLength={80} /></div>
+            </div>
+            <label className="flex items-center gap-2 text-xs text-zinc-400"><input type="checkbox" defaultChecked={!!initial.consentAt} onChange={e=>{const el=document.querySelector<HTMLInputElement>('input[name="consentAt"]'); if(el) el.value = e.target.checked ? new Date().toISOString().slice(0,10) : "";}} /> LGPD consent</label>
             <div className="space-y-1.5"><Label>Notas</Label><Textarea name="notes" rows={3} defaultValue={initial.notes} /></div>
             {err && <pre className="whitespace-pre-wrap rounded bg-red-950/50 p-3 text-xs text-red-300">{err}</pre>}
             <Button type="submit" disabled={loading} className="w-full">{loading?"Salvando...":"Salvar"}</Button>

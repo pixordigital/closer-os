@@ -16,9 +16,11 @@ export default function EditDealPage() {
   const [initial,setInitial]=useState<Record<string,string>|null>(null);
   const [companies,setCompanies]=useState<{id:string,name:string}[]>([]);
   const [contacts,setContacts]=useState<{id:string,name:string,companyId:string}[]>([]);
+  const [members,setMembers]=useState<{id:string,name:string}[]>([]);
   const [companyId,setCompanyId]=useState("");
 
   useEffect(()=>{ fetch("/api/companies?limit=100").then(r=>r.json()).then(j=>setCompanies(j.items ?? [])).catch(()=>{}); },[]);
+  useEffect(()=>{ fetch("/api/members").then(r=>r.json()).then(j=>setMembers((j.items??[]).map((m:{id:string;name:string})=>({id:m.id,name:m.name})))).catch(()=>{}); },[]);
   useEffect(()=>{
     fetch(`/api/deals/${id}`).then(r=>r.json()).then(j=>{
       if(j.error){ setFetchErr(String(j.error)); return; }
@@ -26,6 +28,7 @@ export default function EditDealPage() {
       setInitial({
         companyId: j.companyId ?? j.company?.id ?? "",
         primaryContactId: j.primaryContactId ?? "",
+        ownerId: j.ownerId ?? "",
         name: j.name ?? "",
         stage: j.stage ?? "LEAD",
         value: j.value != null ? String(j.value) : "",
@@ -87,6 +90,12 @@ export default function EditDealPage() {
               <select name="primaryContactId" defaultValue={initial.primaryContactId} className="flex h-9 w-full rounded-md border border-zinc-800 bg-zinc-900 px-3 text-sm text-zinc-100">
                 <option value="">— sem contato —</option>
                 {contacts.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+            </div>
+            <div className="space-y-1.5"><Label>Responsável (owner)</Label>
+              <select name="ownerId" defaultValue={initial.ownerId} className="flex h-9 w-full rounded-md border border-zinc-800 bg-zinc-900 px-3 text-sm text-zinc-100">
+                <option value="">— sem dono —</option>
+                {members.map(m=><option key={m.id} value={m.id}>{m.name}</option>)}
               </select>
             </div>
             <div className="space-y-1.5"><Label>Nome do deal *</Label><Input name="name" required defaultValue={initial.name} /></div>

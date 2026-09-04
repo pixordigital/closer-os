@@ -189,6 +189,9 @@ model Organization {
   webhookEndpoints       WebhookEndpoint[]
   automationRules        AutomationRule[]
   integrationConnections IntegrationConnection[]
+  products               Product[]
+  quotas                 Quota[]
+  proposals              Proposal[]
   aiConfig               AIConfig?
 
   @@index([slug])
@@ -220,6 +223,7 @@ model Company {
   companySize    String? // e.g. "1-10" "11-50" "51-200" "201-1000" "1000+"
   revenueRange   String?
   location       String?
+  cnpj         String?
   description    String?  @db.Text
   notes          String?  @db.Text
   createdAt      DateTime @default(now())
@@ -231,6 +235,7 @@ model Company {
 
   @@index([organizationId])
   @@index([name])
+  @@index([cnpj])
 }
 
 model Contact {
@@ -243,6 +248,8 @@ model Contact {
   phone          String?
   linkedinUrl    String?
   decisionRole   DecisionRole @default(UNKNOWN)
+  consentAt    DateTime?
+  consentSource String?
   notes          String?      @db.Text
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
@@ -277,6 +284,7 @@ model Deal {
   nextStep          String?   @db.Text
   nextStepDate      DateTime?
   lostReason        String?   @db.Text
+  ownerId         String?
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 
@@ -290,12 +298,14 @@ model Deal {
   tasks           Task[]
   roiModels       ROIModel[]
   aiInsights      AIInsight[]
+  proposals       Proposal[]
 
   @@index([organizationId])
   @@index([companyId])
   @@index([stage])
   @@index([expectedCloseDate])
   @@index([createdAt])
+  @@index([ownerId])
 }
 
 // ── Discovery (§29-30) ───────────────────────────────────────────
@@ -830,6 +840,72 @@ model AutomationRun {
 
   @@index([ruleId])
   @@index([organizationId])
+}
+
+// ── Catalog / Quotas / Proposals (F1 robustez) ─────────────────
+model Product {
+  id             String   @id @default(cuid())
+  organizationId String
+  name           String
+  sku            String?
+  description    String?  @db.Text
+  price          Decimal  @db.Decimal(14, 2)
+  currency       String   @default("BRL")
+  active         Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([active])
+  @@index([sku])
+}
+
+model Quota {
+  id             String   @id @default(cuid())
+  organizationId String
+  userId         String
+  period         String // YYYY-MM
+  target         Decimal  @db.Decimal(14, 2)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, userId, period])
+  @@index([organizationId])
+  @@index([userId])
+}
+
+model Proposal {
+  id             String   @id @default(cuid())
+  organizationId String
+  dealId         String
+  createdBy      String?
+  token          String   @unique
+  status         String   @default("DRAFT") // DRAFT | SENT | VIEWED | ACCEPTED | REJECTED | EXPIRED
+  title          String
+  html           String?  @db.Text
+  items          Json? // [{ name, qty, unitPrice, total }]
+  total          Decimal? @db.Decimal(14, 2)
+  currency       String   @default("BRL")
+  expiresAt      DateTime?
+  viewedAt       DateTime?
+  viewedCount    Int      @default(0)
+  acceptedAt     DateTime?
+  acceptedIp     String?
+  rejectedAt     DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  deal         Deal         @relation(fields: [dealId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([dealId])
+  @@index([token])
+  @@index([status])
 }
 
 // ── Integrations §85 (Phase 11) ───────────────────────────────

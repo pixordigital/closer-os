@@ -35,7 +35,13 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       const company = await prisma.company.findFirst({ where: { id: parsed.data.companyId, organizationId } });
       if (!company) return NextResponse.json({ error: "Company not found in organization" }, { status: 404 });
     }
-    const updated = await prisma.contact.update({ where: { id }, data: parsed.data });
+    if ((parsed.data as { email?: string | null }).email) {
+      const emailLower = (parsed.data as { email: string }).email.trim().toLowerCase();
+      const dup = await prisma.contact.findFirst({ where: { organizationId, email: { equals: emailLower, mode: "insensitive" as const }, id: { not: id } } as never, select: { id: true } });
+      if (dup) return NextResponse.json({ error: "Contato com esse email já existe", existingId: dup.id }, { status: 409 });
+      (parsed.data as Record<string, unknown>).email = emailLower;
+    }
+    const updated = await prisma.contact.update({ where: { id }, data: parsed.data as never });
     await auditLog({ organizationId, userId, action: "contact.updated", entityType: "Contact", entityId: id });
     return NextResponse.json(updated);
   } catch (e: unknown) {

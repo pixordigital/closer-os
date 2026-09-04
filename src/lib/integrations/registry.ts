@@ -1,7 +1,8 @@
 import type { IntegrationProvider } from "./types";
 import { MockCalendarProvider, MockTranscriptProvider } from "./providers/mock";
 import { GoogleCalendarStub } from "./providers/googleCalendarStub";
-import { MockEmailProvider, GmailStub } from "./providers/email";
+import { MockEmailProvider } from "./providers/email";
+import { GmailProvider } from "./providers/gmail";
 
 const registry = new Map<string, IntegrationProvider>();
 
@@ -11,7 +12,7 @@ function ensureDefaults() {
     registerIntegration(new MockTranscriptProvider());
     registerIntegration(new GoogleCalendarStub());
     registerIntegration(new MockEmailProvider());
-    registerIntegration(new GmailStub());
+    registerIntegration(new GmailProvider());
   }
 }
 

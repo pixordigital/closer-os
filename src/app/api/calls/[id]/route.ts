@@ -4,6 +4,7 @@ import { requireTenant } from "@/lib/tenant";
 import { callUpdateSchema } from "@/lib/validations/call";
 import { auditLog } from "@/lib/audit";
 import { fireTriggers } from "@/lib/triggers";
+import { enqueueJob } from "@/lib/jobs";
 
 async function getScoped(id: string, organizationId: string) {
   const c = await prisma.call.findFirst({
@@ -48,6 +49,11 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     await auditLog({ organizationId, userId, action: "call.updated", entityType: "Call", entityId: id });
     if ((parsed.data as { status?: string }).status === "COMPLETED") {
       fireTriggers({ organizationId, event: "call.completed", payload: { id, callId: id, dealId: updated.dealId, status: updated.status }, idempotencyKey: `call.completed:${id}` });
+    }
+    const sched = (parsed.data as { scheduledAt?: Date | null }).scheduledAt;
+    if (sched) {
+      const d = new Date(sched as unknown as string); const runAt = new Date(d); runAt.setDate(runAt.getDate()-1); runAt.setHours(9,0,0,0);
+      if (runAt.getTime() > Date.now()+60_000) void enqueueJob({ organizationId, type:"whatsapp_reminder_d1" as never, payload:{ organizationId, callId:id }, runAt }).catch(()=>{});
     }
     return NextResponse.json(updated);
   } catch (e: unknown) {

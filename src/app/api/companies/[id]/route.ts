@@ -34,7 +34,17 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     const body = await req.json().catch(() => null);
     const parsed = companyUpdateSchema.safeParse(body);
     if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
-    const updated = await prisma.company.update({ where: { id }, data: parsed.data });
+    const cnpjDigits = (parsed.data as { cnpj?: string }).cnpj?.replace(/\D/g, "") || undefined;
+    if (cnpjDigits) {
+      const dupCnpj = await prisma.company.findFirst({ where: { organizationId, cnpj: cnpjDigits, id: { not: id } } as never, select: { id: true } });
+      if (dupCnpj) return NextResponse.json({ error: "CNPJ já cadastrado", existingId: dupCnpj.id }, { status: 409 });
+      (parsed.data as Record<string, unknown>).cnpj = cnpjDigits;
+    }
+    if ((parsed.data as { name?: string }).name) {
+      const dup = await prisma.company.findFirst({ where:{ organizationId, name:{ equals:(parsed.data as {name:string}).name, mode:"insensitive" as const }, id:{ not:id } }, select:{ id:true } });
+      if (dup) return NextResponse.json({ error:"Empresa já existe nesta organização", existingId: dup.id }, { status:409 });
+    }
+    const updated = await prisma.company.update({ where: { id }, data: parsed.data as never });
     await auditLog({ organizationId, userId, action: "company.updated", entityType: "Company", entityId: id });
     return NextResponse.json(updated);
   } catch (e: unknown) {

@@ -55,6 +55,11 @@ function NewContactForm() {
               <div className="space-y-1.5"><Label>Telefone</Label><Input name="phone" /></div>
               <div className="space-y-1.5"><Label>LinkedIn</Label><Input name="linkedinUrl" placeholder="https://..." /></div>
             </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5"><Label>Consent at</Label><Input name="consentAt" type="date" /></div>
+              <div className="space-y-1.5"><Label>Consent source</Label><Input name="consentSource" placeholder="form, call, import" maxLength={80} /></div>
+            </div>
+            <label className="flex items-center gap-2 text-xs text-zinc-400"><input type="checkbox" onChange={e=>{const el=document.querySelector<HTMLInputElement>('input[name="consentAt"]'); if(el) el.value = e.target.checked ? new Date().toISOString().slice(0,10) : "";}} /> LGPD consent agora</label>
             <div className="space-y-1.5"><Label>Notas</Label><Textarea name="notes" rows={2} /></div>
             {err && <pre className="whitespace-pre-wrap rounded bg-red-950/50 p-3 text-xs text-red-300">{err}</pre>}
             <Button type="submit" disabled={loading} className="w-full">{loading?"Salvando...":"Criar contato"}</Button>

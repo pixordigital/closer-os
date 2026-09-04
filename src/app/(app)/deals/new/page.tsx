@@ -12,11 +12,13 @@ function NewDealForm() {
   const sp = useSearchParams();
   const [companies, setCompanies]=useState<{id:string,name:string}[]>([]);
   const [contacts, setContacts]=useState<{id:string,name:string,companyId:string}[]>([]);
+  const [members, setMembers]=useState<{id:string,name:string}[]>([]);
   const [err,setErr]=useState<string|null>(null);
   const [loading,setLoading]=useState(false);
   const [companyId, setCompanyId]=useState(sp.get("companyId") ?? "");
 
   useEffect(()=>{ fetch("/api/companies?limit=100").then(r=>r.json()).then(j=>setCompanies(j.items ?? [])).catch(()=>{}); },[]);
+  useEffect(()=>{ fetch("/api/members").then(r=>r.json()).then(j=>setMembers((j.items??[]).map((m:{id:string;name:string})=>({id:m.id,name:m.name})))).catch(()=>{}); },[]);
   useEffect(()=>{ if(!companyId) return; fetch(`/api/contacts?companyId=${companyId}&limit=100`).then(r=>r.json()).then(j=>setContacts(j.items ?? [])).catch(()=>{}); },[companyId]);
 
   async function onSubmit(e:React.FormEvent<HTMLFormElement>) {
@@ -27,6 +29,7 @@ function NewDealForm() {
     if(!body.value) delete body.value;
     if(!body.probability) delete body.probability;
     if(!body.primaryContactId) delete body.primaryContactId;
+    if(!body.ownerId) delete body.ownerId;
     if(!body.expectedCloseDate) delete body.expectedCloseDate;
     if(!body.nextStepDate) delete body.nextStepDate;
     for(const k of Object.keys(body)) if(body[k]==="") delete body[k];
@@ -55,7 +58,15 @@ function NewDealForm() {
                 {contacts.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
             </div>
-            <div className="space-y-1.5"><Label>Nome do deal *</Label><Input name="name" required placeholder="Ex: Acme — Automação Comercial" /></div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5"><Label>Responsável (owner)</Label>
+                <select name="ownerId" className="flex h-9 w-full rounded-md border border-zinc-800 bg-zinc-900 px-3 text-sm text-zinc-100">
+                  <option value="">— eu mesmo —</option>
+                  {members.map(m=><option key={m.id} value={m.id}>{m.name}</option>)}
+                </select>
+              </div>
+              <div className="space-y-1.5"><Label>Nome do deal *</Label><Input name="name" required placeholder="Ex: Acme — Automação Comercial" /></div>
+            </div>
             <div className="grid grid-cols-3 gap-3">
               <div className="space-y-1.5"><Label>Stage</Label>
                 <select name="stage" defaultValue="LEAD" className="flex h-9 w-full rounded-md border border-zinc-800 bg-zinc-900 px-2 text-sm text-zinc-100">

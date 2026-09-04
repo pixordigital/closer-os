@@ -8,6 +8,7 @@ export const companyCreateSchema = z.object({
   companySize: z.string().max(40).optional(),
   revenueRange: z.string().max(40).optional(),
   location: z.string().max(120).optional(),
+  cnpj: z.string().max(18).optional().or(z.literal("").transform(() => undefined)),
   description: z.string().max(5000).optional(),
   notes: z.string().max(5000).optional(),
 });
@@ -25,6 +26,8 @@ export const contactCreateSchema = z.object({
   phone: z.string().max(40).optional(),
   linkedinUrl: z.string().url().max(255).optional().or(z.literal("").transform(() => undefined)),
   decisionRole: decisionRoleEnum.optional().default("UNKNOWN"),
+  consentAt: z.string().optional().nullable().transform((v) => v ? new Date(v) : null),
+  consentSource: z.string().max(80).optional().nullable(),
   notes: z.string().max(5000).optional(),
 });
 export const contactUpdateSchema = contactCreateSchema.partial().omit({ companyId: true }).extend({
@@ -38,6 +41,7 @@ export const dealStageEnum = z.enum(["LEAD","QUALIFIED","DISCOVERY","SOLUTION","
 export const dealCreateSchema = z.object({
   companyId: z.string().cuid(),
   primaryContactId: z.string().cuid().optional().nullable(),
+  ownerId: z.string().min(1).max(64).optional().nullable(),
   name: z.string().min(2).max(160),
   stage: dealStageEnum.optional().default("LEAD"),
   value: z.coerce.number().nonnegative().max(999999999999).optional().nullable(),

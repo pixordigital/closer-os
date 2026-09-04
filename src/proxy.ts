@@ -16,6 +16,10 @@ const PUBLIC = [
   "/api/webhooks/inbound",
   "/api/track/open",
   "/api/track/click",
+  "/p",
+  "/api/p",
+  "/api/calendar/callback",
+  "/api/gmail/callback",
 ];
 
 function isPublic(pathname: string): boolean {
