@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { taskStatusEnum } from "@/lib/validations/crm";
 import type { Prisma } from "@prisma/client";
+import { SnoozeButton } from "@/components/tasks/snooze-button";
 
 export default async function TasksPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const { organizationId } = await requireTenant();
@@ -53,10 +54,10 @@ export default async function TasksPage({ searchParams }: { searchParams: Promis
       <div className="mt-6 overflow-x-auto rounded-lg border border-zinc-800">
         <table className="w-full text-sm">
           <thead className="bg-zinc-900 text-xs uppercase tracking-wide text-zinc-400">
-            <tr><th className="px-4 py-2 text-left">Task</th><th className="px-4 py-2 text-left">Deal</th><th className="px-4 py-2 text-left">Responsável</th><th className="px-4 py-2 text-left">Status</th><th className="px-4 py-2 text-left">Vencimento</th></tr>
+            <tr><th className="px-4 py-2 text-left">Task</th><th className="px-4 py-2 text-left">Deal</th><th className="px-4 py-2 text-left">Responsável</th><th className="px-4 py-2 text-left">Status</th><th className="px-4 py-2 text-left">Vencimento</th><th className="px-4 py-2 text-left">Ação</th></tr>
           </thead>
           <tbody className="divide-y divide-zinc-800">
-            {items.length===0 && <tr><td colSpan={5} className="px-4 py-8 text-center text-zinc-500">Nenhuma task.</td></tr>}
+            {items.length===0 && <tr><td colSpan={6} className="px-4 py-8 text-center text-zinc-500">Nenhuma task.</td></tr>}
             {items.map(t=>(
               <tr key={t.id} className="hover:bg-zinc-900/60">
                 <td className="px-4 py-3 font-medium text-zinc-100"><Link href={`/tasks/${t.id}/edit`} className="hover:underline">{t.title}</Link></td>
@@ -64,6 +65,12 @@ export default async function TasksPage({ searchParams }: { searchParams: Promis
                 <td className="px-4 py-3 text-zinc-400">{t.assigneeId ? (memberMap.get(t.assigneeId) ?? t.assigneeId.slice(0,8)) : "—"}</td>
                 <td className="px-4 py-3"><Badge>{t.status}</Badge></td>
                 <td className="px-4 py-3 text-zinc-400">{t.dueDate ? new Date(t.dueDate).toLocaleDateString("pt-BR") : "—"}</td>
+                <td className="px-4 py-3">
+                  <div className="flex gap-1">
+                    <SnoozeButton id={t.id} hours={24} label="+1d" />
+                    <SnoozeButton id={t.id} hours={72} label="+3d" />
+                  </div>
+                </td>
               </tr>
             ))}
           </tbody>
