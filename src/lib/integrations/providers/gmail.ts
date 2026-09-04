@@ -1,6 +1,10 @@
 import type { IntegrationProvider } from "../types";
 
-function getGmailOAuthConfig() {
+function getGmailOAuthConfig(override?: Record<string,unknown>) {
+  if(override?.client_id || override?.clientId){
+    const j=override as Record<string,string>;
+    return { clientId: j.client_id ?? j.clientId, clientSecret: j.client_secret ?? j.clientSecret, redirectUri: j.redirect_uris?.[0] ?? j.redirectUri ?? j.redirect_uri ?? `${process.env.APP_URL ?? "http://localhost:3000"}/api/gmail/callback` };
+  }
   const raw = process.env.GOOGLE_GMAIL_CREDENTIALS ?? process.env.GOOGLE_CALENDAR_CREDENTIALS ?? "";
   try {
     const j = JSON.parse(raw);
@@ -18,9 +22,9 @@ export class GmailProvider implements IntegrationProvider {
   readonly name = "gmail";
   readonly kind = "email" as const;
 
-  authUrl(state: string) {
-    const c = getGmailOAuthConfig();
-    if (!c?.clientId) throw new Error("Google Gmail credentials not configured (GOOGLE_GMAIL_CREDENTIALS or GOOGLE_CALENDAR_CREDENTIALS)");
+  authUrl(state: string, override?: Record<string,unknown>) {
+    const c = getGmailOAuthConfig(override);
+    if (!c?.clientId) throw new Error("Google Gmail credentials não configuradas — cole o JSON em /integrations ou configure env GOOGLE_GMAIL_CREDENTIALS");
     const u = new URL("https://accounts.google.com/o/oauth2/v2/auth");
     u.searchParams.set("client_id", c.clientId);
     u.searchParams.set("redirect_uri", c.redirectUri);

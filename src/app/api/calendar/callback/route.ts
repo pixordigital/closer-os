@@ -9,10 +9,17 @@ export async function GET(req:Request){
   if(!code || !state) return NextResponse.json({ error:"missing code/state" }, { status:400 });
   let payload:{ organizationId:string, userId:string }|null=null;
   try{ const { payload: p } = await jose.jwtVerify(state, new TextEncoder().encode(process.env.AUTH_SECRET!)); payload=p as unknown as { organizationId:string, userId:string }; }catch{ return NextResponse.json({ error:"invalid state" }, { status:400});}
-  const raw=process.env.GOOGLE_CALENDAR_CREDENTIALS ?? "";
   let cfg:{clientId:string,clientSecret:string,redirectUri:string}|null=null;
-  try{ const j=JSON.parse(raw); cfg={ clientId:j.client_id??j.clientId, clientSecret:j.client_secret??j.clientSecret, redirectUri: j.redirect_uris?.[0] ?? process.env.APP_URL+"/api/calendar/callback" }; }catch{}
-  if(!cfg?.clientId) return NextResponse.json({ error:"Google credentials not configured" }, { status:500});
+  const existingCfg = await prisma.integrationConnection.findFirst({ where:{ organizationId: payload.organizationId, provider:"google-calendar" } });
+  const rawDb = (existingCfg?.config as Record<string,unknown>) ?? null;
+  if(rawDb?.client_id || rawDb?.clientId){
+    const j=rawDb as Record<string,string>;
+    cfg={ clientId: j.client_id ?? j.clientId, clientSecret: j.client_secret ?? j.clientSecret, redirectUri: j.redirect_uris?.[0] ?? j.redirectUri ?? j.redirect_uri ?? process.env.APP_URL+"/api/calendar/callback" };
+  } else {
+    const raw=process.env.GOOGLE_CALENDAR_CREDENTIALS ?? "";
+    try{ const j=JSON.parse(raw); cfg={ clientId:j.client_id??j.clientId, clientSecret:j.client_secret??j.clientSecret, redirectUri: j.redirect_uris?.[0] ?? process.env.APP_URL+"/api/calendar/callback" }; }catch{}
+  }
+  if(!cfg?.clientId) return NextResponse.json({ error:"Google Calendar credentials não configuradas — cole JSON em /integrations → Google 1-clique", hint:"POST /api/integrations {provider:'google-calendar', config:{client_id, client_secret}}" }, { status:500});
   const tokenRes=await fetch("https://oauth2.googleapis.com/token",{
     method:"POST", headers:{ "Content-Type":"application/x-www-form-urlencoded" },
     body: new URLSearchParams({ code, client_id: cfg.clientId, client_secret: cfg.clientSecret, redirect_uri: cfg.redirectUri, grant_type:"authorization_code" })

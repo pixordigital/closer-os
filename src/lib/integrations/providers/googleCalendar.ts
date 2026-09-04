@@ -1,6 +1,10 @@
 import type { IntegrationProvider } from "../types";
 
-function getOAuthConfig(){
+function getOAuthConfig(override?: Record<string,unknown>){
+  if(override?.client_id || override?.clientId){
+    const j=override as Record<string,string>;
+    return { clientId: j.client_id ?? j.clientId, clientSecret: j.client_secret ?? j.clientSecret, redirectUri: j.redirect_uris?.[0] ?? j.redirectUri ?? j.redirect_uri ?? process.env.APP_URL+"/api/calendar/callback" };
+  }
   const raw = process.env.GOOGLE_CALENDAR_CREDENTIALS ?? "";
   try { const j=JSON.parse(raw); return { clientId: j.client_id ?? j.clientId, clientSecret: j.client_secret ?? j.clientSecret, redirectUri: j.redirect_uris?.[0] ?? j.redirectUri ?? process.env.APP_URL+"/api/calendar/callback" }; } catch { return null; }
 }
@@ -8,8 +12,8 @@ function getOAuthConfig(){
 export class GoogleCalendarProvider implements IntegrationProvider {
   readonly name = "google-calendar";
   readonly kind = "calendar" as const;
-  authUrl(state:string){
-    const c=getOAuthConfig(); if(!c?.clientId) throw new Error("Google credentials not configured");
+  authUrl(state:string, override?: Record<string,unknown>){
+    const c=getOAuthConfig(override); if(!c?.clientId) throw new Error("Google Calendar credentials não configuradas — cole o JSON do Google Cloud em /integrations (GOOGLE_CALENDAR_CREDENTIALS) ou configure env");
     const u=new URL("https://accounts.google.com/o/oauth2/v2/auth");
     u.searchParams.set("client_id", c.clientId);
     u.searchParams.set("redirect_uri", c.redirectUri);

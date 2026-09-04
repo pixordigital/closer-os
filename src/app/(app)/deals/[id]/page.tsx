@@ -64,7 +64,6 @@ export default async function DealDetailPage({ params }: { params: Promise<{ id:
           </div>
         </div>
         <div className="flex gap-2">
-          <Link href={`/deals/${deal.id}/proposal`}><Button size="sm">Proposta</Button></Link>
           <Link href={`/deals/${deal.id}/edit`}><Button variant="outline" size="sm">Editar</Button></Link>
           <Link href={`/pipeline`}><Button variant="ghost" size="sm">← Pipeline</Button></Link>
         </div>
@@ -132,30 +131,6 @@ export default async function DealDetailPage({ params }: { params: Promise<{ id:
           </div>
         </div>
         <p className="mt-3 text-xs text-zinc-500">API: <code>POST /api/deals/{deal.id}/stakeholders</code> · <code>POST /api/deals/{deal.id}/map</code> · procurement em <code>/api/deals/:id/procurement</code></p>
-      </section>
-
-      <section className="mt-6 rounded-xl border border-zinc-800 bg-zinc-900 p-4">
-        <div className="flex items-center justify-between">
-          <h2 className="font-medium">Propostas ({(proposals as unknown as unknown[]).length})</h2>
-          <Link href={`/deals/${deal.id}/proposal`} className="text-xs text-sky-400 hover:underline">+ Nova proposta</Link>
-        </div>
-        {(proposals as unknown as Array<{id:string;title:string;status:string;total:unknown;currency:string;token:string;viewedCount:number;expiresAt:string|null;createdAt:string}>).length===0 && <p className="mt-3 text-sm text-zinc-500">Nenhuma proposta. Gere a primeira.</p>}
-        <div className="mt-3 space-y-2">
-          {(proposals as unknown as Array<{id:string;title:string;status:string;total:unknown;currency:string;token:string;viewedCount:number;expiresAt:string|null;createdAt:string}>).map(pr=>(
-            <div key={pr.id} className="flex items-center justify-between rounded-md border border-zinc-800 bg-zinc-950 px-3 py-2">
-              <div>
-                <div className="text-sm text-zinc-100">{pr.title} <Badge>{pr.status}</Badge></div>
-                <div className="text-xs text-zinc-500">{pr.viewedCount} views{pr.expiresAt ? ` · expira ${new Date(pr.expiresAt).toLocaleDateString("pt-BR")}`:""} · {new Date(pr.createdAt).toLocaleDateString("pt-BR")}</div>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-zinc-200">{pr.total!=null ? new Intl.NumberFormat("pt-BR",{style:"currency",currency:pr.currency}).format(Number(pr.total)):"—"}</span>
-                <Link href={`/p/${pr.token}`} target="_blank" className="text-xs text-sky-400 hover:underline">/p/{pr.token.slice(0,8)}…</Link>
-                <Link href={`/api/proposals/${pr.id}`} className="text-xs text-zinc-500 hover:text-zinc-300">API</Link>
-              </div>
-            </div>
-          ))}
-        </div>
-        <p className="mt-2 text-xs text-zinc-500">POST <code className="text-zinc-400">/api/proposals</code> {"{dealId,title,items:[{name,qty,unitPrice}],expiresAt}"} · público em <code className="text-zinc-400">/p/:token</code> (view tracking + aceitar/recusar → WON)</p>
       </section>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
