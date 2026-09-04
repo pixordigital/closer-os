@@ -15,6 +15,7 @@ const PUBLIC = [
   "/api/ready",
   "/api/webhooks/inbound",
   "/api/track/open",
+  "/api/track/click",
 ];
 
 function isPublic(pathname: string): boolean {
@@ -38,7 +39,12 @@ export async function proxy(req: NextRequest) {
   }
 
   const secret = process.env.AUTH_SECRET;
-  if (!secret) return NextResponse.next();
+  if (!secret) {
+    console.error("[proxy] AUTH_SECRET missing — denying request");
+    const url = req.nextUrl.clone();
+    url.pathname = "/login";
+    return NextResponse.redirect(url);
+  }
   try {
     await jose.jwtVerify(token, new TextEncoder().encode(secret));
     return NextResponse.next();

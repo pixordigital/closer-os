@@ -3,17 +3,20 @@ import { requireTenant, parsePagination } from "@/lib/tenant";
 import { prisma } from "@/lib/db";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { taskStatusEnum } from "@/lib/validations/crm";
+import type { Prisma } from "@prisma/client";
 
 export default async function TasksPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const { organizationId } = await requireTenant();
   const sp = await searchParams;
-  const status = (sp.status ?? "").trim().toUpperCase() || undefined;
+  const parsedStatus = taskStatusEnum.safeParse((sp.status ?? "").trim().toUpperCase());
+  const status = parsedStatus.success ? parsedStatus.data : undefined;
   const q = (sp.q ?? "").trim();
   const dealId = (sp.dealId ?? "").trim() || undefined;
   const url = new URL("http://x/?" + new URLSearchParams(sp as Record<string, string>).toString());
   const { page, limit, skip } = parsePagination(url, { page: 1, limit: 20 });
 
-  const where = {
+  const where: Prisma.TaskWhereInput = {
     organizationId,
     ...(status ? { status } : {}),
     ...(dealId ? { dealId } : {}),
@@ -22,13 +25,13 @@ export default async function TasksPage({ searchParams }: { searchParams: Promis
 
   const [items, total, members] = await Promise.all([
     prisma.task.findMany({
-      where: where as never,
+      where,
       orderBy: { createdAt: "desc" },
       skip,
       take: limit,
       include: { deal: { select: { id: true, name: true } } },
     }),
-    prisma.task.count({ where: where as never }),
+    prisma.task.count({ where }),
     prisma.membership.findMany({ where:{ organizationId }, include:{ user:{ select:{ id:true, name:true } } } }),
   ]);
   const memberMap = new Map(members.map(m=>[m.user.id, m.user.name]));
@@ -58,7 +61,7 @@ export default async function TasksPage({ searchParams }: { searchParams: Promis
               <tr key={t.id} className="hover:bg-zinc-900/60">
                 <td className="px-4 py-3 font-medium text-zinc-100"><Link href={`/tasks/${t.id}/edit`} className="hover:underline">{t.title}</Link></td>
                 <td className="px-4 py-3 text-zinc-400">{t.deal ? <Link href={`/deals/${t.deal.id}`} className="hover:underline">{t.deal.name}</Link> : "—"}</td>
-                <td className="px-4 py-3 text-zinc-400">{(t as unknown as {assigneeId?:string}).assigneeId ? (memberMap.get((t as unknown as {assigneeId:string}).assigneeId) ?? (t as unknown as {assigneeId:string}).assigneeId.slice(0,8)) : "—"}</td>
+                <td className="px-4 py-3 text-zinc-400">{t.assigneeId ? (memberMap.get(t.assigneeId) ?? t.assigneeId.slice(0,8)) : "—"}</td>
                 <td className="px-4 py-3"><Badge>{t.status}</Badge></td>
                 <td className="px-4 py-3 text-zinc-400">{t.dueDate ? new Date(t.dueDate).toLocaleDateString("pt-BR") : "—"}</td>
               </tr>

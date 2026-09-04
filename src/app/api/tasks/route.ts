@@ -1,26 +1,28 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireTenant, parsePagination } from "@/lib/tenant";
-import { taskCreateSchema } from "@/lib/validations/crm";
+import { taskCreateSchema, taskStatusEnum } from "@/lib/validations/crm";
+import type { Prisma } from "@prisma/client";
 import { auditLog } from "@/lib/audit";
 
 export async function GET(req: Request) {
   const { organizationId } = await requireTenant();
   const url = new URL(req.url);
   const { page, limit, skip, q } = parsePagination(url);
-  const status = url.searchParams.get("status")?.trim().toUpperCase() || undefined;
+  const parsedStatus = taskStatusEnum.safeParse(url.searchParams.get("status")?.trim().toUpperCase() ?? "");
+  const status = parsedStatus.success ? parsedStatus.data : undefined;
   const dealId = url.searchParams.get("dealId")?.trim() || undefined;
   const due = url.searchParams.get("due")?.trim().toLowerCase();
-  const dueFilter: Record<string, unknown> = {};
+  const dueFilter: Prisma.TaskWhereInput = {};
   if (due === "overdue") {
     const start = new Date(); start.setHours(0,0,0,0);
     dueFilter.dueDate = { lt: start };
-    (dueFilter as Record<string, unknown>).status = { in: ["TODO","IN_PROGRESS"] };
+    dueFilter.status = { in: ["TODO","IN_PROGRESS"] };
   } else if (due === "today") {
     const s = new Date(); s.setHours(0,0,0,0); const e = new Date(); e.setHours(23,59,59,999);
     dueFilter.dueDate = { gte: s, lte: e };
   }
-  const where: Record<string, unknown> = {
+  const where: Prisma.TaskWhereInput = {
     organizationId,
     ...(status ? { status } : {}),
     ...(dealId ? { dealId } : {}),
@@ -29,12 +31,12 @@ export async function GET(req: Request) {
   };
   const [items, total] = await Promise.all([
     prisma.task.findMany({
-      where: where as never,
+      where,
       orderBy: { createdAt: "desc" },
       skip, take: limit,
       include: { deal: { select: { id: true, name: true } } },
     }),
-    prisma.task.count({ where: where as never }),
+    prisma.task.count({ where }),
   ]);
   return NextResponse.json({ items, total, page, limit });
 }

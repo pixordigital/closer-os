@@ -16,10 +16,14 @@ android {
     }
     signingConfigs {
         release {
+            // ponytail: credenciais vêm de local.properties ou env var; sem plaintext no repo
+            def props = new Properties()
+            def f = rootProject.file('local.properties')
+            if (f.exists()) { f.withInputStream { props.load(it) } }
             storeFile file('closer-release.keystore')
-            storePassword 'Closer123'
-            keyAlias 'closer'
-            keyPassword 'Closer123'
+            storePassword props.getProperty('closer.storePassword') ?: System.getenv('CLOSER_STORE_PASSWORD') ?: ''
+            keyAlias props.getProperty('closer.keyAlias') ?: System.getenv('CLOSER_KEY_ALIAS') ?: 'closer'
+            keyPassword props.getProperty('closer.keyPassword') ?: System.getenv('CLOSER_KEY_PASSWORD') ?: ''
         }
     }
     buildTypes {
