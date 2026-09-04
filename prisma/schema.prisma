@@ -353,7 +353,7 @@ model Deal {
   forecastCategory  ForecastCategory? // PIPELINE | COMMIT | BEST_CASE | UPSIDE
   value             Decimal?          @db.Decimal(14, 2)
   currency          String            @default("BRL")
-  probability       Int?              // 0-100
+  probability       Int? // 0-100
   expectedCloseDate DateTime?
   source            String?
   currentSolution   String?           @db.Text
@@ -1188,19 +1188,19 @@ model Certification {
 model AccountHealth {
   id                 String          @id @default(cuid())
   organizationId     String
-  companyId          String
-  overallScore       Int             // 0-100
+  companyId          String          @unique
+  overallScore       Int // 0-100
   tier               HealthScoreTier @default(HEALTHY)
-  adoptionScore      Int?            // 0-100
-  engagementScore    Int?            // 0-100
-  supportScore       Int?            // 0-100
-  npsScore           Int?            // -100 to 100
+  adoptionScore      Int? // 0-100
+  engagementScore    Int? // 0-100
+  supportScore       Int? // 0-100
+  npsScore           Int? // -100 to 100
   lastLoginDays      Int?
   lastTouchDays      Int?
   openTickets        Int?
-  churnRisk          Float?          // 0-1
-  expansionPotential Float?          // 0-1
-  signals            Json?           // [{ type, value, date, source }]
+  churnRisk          Float? // 0-1
+  expansionPotential Float? // 0-1
+  signals            Json? // [{ type, value, date, source }]
   calculatedAt       DateTime        @default(now())
   createdAt          DateTime        @default(now())
   updatedAt          DateTime        @updatedAt
@@ -1208,7 +1208,7 @@ model AccountHealth {
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   company      Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
-  @@unique([organizationId, companyId])
+  @@index([companyId])
   @@index([organizationId])
 }
 
@@ -1224,7 +1224,7 @@ model ExpansionPlaybook {
   updatedAt      DateTime @updatedAt
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  Company      Company?     @relation(fields: [companyId], references: [id])
+  company      Company?     @relation(fields: [companyId], references: [id])
   companyId    String?
 
   @@index([organizationId])
