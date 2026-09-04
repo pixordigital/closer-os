@@ -29,9 +29,8 @@ export default async function DealDetailPage({ params }: { params: Promise<{ id:
   });
   if (!deal) notFound();
 
-  const [ { fields: discoveryFields, health }, proposals, stakeholders, mapItems, procurement ] = await Promise.all([
+  const [ { fields: discoveryFields, health }, stakeholders, mapItems, procurement ] = await Promise.all([
     getDiscoveryWithHealth(id),
-    prisma.proposal.findMany({ where:{ organizationId, dealId: id } as never, orderBy:{ createdAt:"desc" }, take: 10, select:{ id:true, title:true, status:true, total:true, currency:true, token:true, viewedCount:true, expiresAt:true, createdAt:true } }),
     (prisma as unknown as { stakeholder: { findMany: (a:unknown)=>Promise<unknown[]> } }).stakeholder.findMany({ where:{ dealId: id } as never, orderBy:{ influence:"desc" } } as never).catch(()=>[]),
     (prisma as unknown as { mAPItem: { findMany: (a:unknown)=>Promise<unknown[]> } }).mAPItem.findMany({ where:{ dealId: id } as never, orderBy:{ createdAt:"asc" } } as never).catch(()=>[]),
     (prisma as unknown as { procurementChecklist: { findUnique: (a:unknown)=>Promise<unknown> } }).procurementChecklist.findUnique({ where:{ dealId: id } as never }).catch(()=>null),
