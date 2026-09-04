@@ -43,10 +43,16 @@ export default async function FollowUpsPage({ searchParams }: { searchParams: Pr
         {items.length === 0 && <p className="text-sm text-zinc-500">Nenhum follow-up.</p>}
         {items.map((f) => (
           <div key={f.id} className="rounded-lg border border-zinc-800 bg-zinc-900 p-4">
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <Badge>{f.type}</Badge><Badge>{f.status}</Badge>
               <span className="text-xs text-zinc-500">{new Date(f.createdAt).toLocaleString("pt-BR")}</span>
               {f.deal && <Link href={`/deals/${f.deal.id}`} className="text-xs text-sky-400 hover:underline">{f.deal.name}</Link>}
+              <span className="ml-auto flex gap-1">
+                {f.status==="DRAFT" && <form action={`/api/follow-ups/${f.id}`} method="post"><input type="hidden" name="status" value="PENDING_REVIEW" /><button className="rounded bg-zinc-800 px-2 py-1 text-xs text-zinc-200 hover:bg-zinc-700">→ Review</button></form>}
+                {f.status==="PENDING_REVIEW" && <form action={`/api/follow-ups/${f.id}`} method="post"><input type="hidden" name="status" value="APPROVED" /><button className="rounded bg-sky-600 px-2 py-1 text-xs text-white hover:bg-sky-500">Aprovar</button></form>}
+                {f.status==="APPROVED" && <form action={`/api/follow-ups/${f.id}/send`} method="post"><button className="rounded bg-emerald-600 px-2 py-1 text-xs text-white hover:bg-emerald-500">Enviar</button></form>}
+                {["DRAFT","PENDING_REVIEW","APPROVED"].includes(f.status) && <form action={`/api/follow-ups/${f.id}`} method="post"><input type="hidden" name="status" value="CANCELLED" /><button className="rounded border border-zinc-700 px-2 py-1 text-xs text-zinc-400">Cancelar</button></form>}
+              </span>
             </div>
             {f.subject && <div className="mt-2 text-sm font-medium text-zinc-100">{f.subject}</div>}
             <div className="mt-1 whitespace-pre-wrap text-sm text-zinc-300">{f.content.slice(0, 600)}{f.content.length > 600 ? "…" : ""}</div>

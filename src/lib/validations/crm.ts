@@ -65,6 +65,15 @@ export const dealUpdateSchema = dealCreateSchema.partial().extend({
   if (data.stage === "LOST" && (!data.lostReason || !data.lostReason.trim())) {
     ctx.addIssue({ code: "custom", path: ["lostReason"], message: "Motivo da perda obrigatório ao mover para LOST" });
   }
+  const needsNext = data.stage && !["LEAD","WON","LOST"].includes(data.stage);
+  if (needsNext && data.stage) {
+    if (data.nextStep !== undefined && (!data.nextStep || !String(data.nextStep).trim())) {
+      ctx.addIssue({ code: "custom", path: ["nextStep"], message: "Próximo passo obrigatório para avançar estágio" });
+    }
+    if (data.nextStepDate !== undefined && !data.nextStepDate) {
+      ctx.addIssue({ code: "custom", path: ["nextStepDate"], message: "Data do próximo passo obrigatória" });
+    }
+  }
 });
 export type DealCreateInput = z.infer<typeof dealCreateSchema>;
 

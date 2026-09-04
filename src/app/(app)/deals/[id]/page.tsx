@@ -29,9 +29,12 @@ export default async function DealDetailPage({ params }: { params: Promise<{ id:
   });
   if (!deal) notFound();
 
-  const [ { fields: discoveryFields, health }, proposals ] = await Promise.all([
+  const [ { fields: discoveryFields, health }, proposals, stakeholders, mapItems, procurement ] = await Promise.all([
     getDiscoveryWithHealth(id),
     prisma.proposal.findMany({ where:{ organizationId, dealId: id } as never, orderBy:{ createdAt:"desc" }, take: 10, select:{ id:true, title:true, status:true, total:true, currency:true, token:true, viewedCount:true, expiresAt:true, createdAt:true } }),
+    (prisma as unknown as { stakeholder: { findMany: (a:unknown)=>Promise<unknown[]> } }).stakeholder.findMany({ where:{ dealId: id } as never, orderBy:{ influence:"desc" } } as never).catch(()=>[]),
+    (prisma as unknown as { mAPItem: { findMany: (a:unknown)=>Promise<unknown[]> } }).mAPItem.findMany({ where:{ dealId: id } as never, orderBy:{ createdAt:"asc" } } as never).catch(()=>[]),
+    (prisma as unknown as { procurementChecklist: { findUnique: (a:unknown)=>Promise<unknown> } }).procurementChecklist.findUnique({ where:{ dealId: id } as never }).catch(()=>null),
   ]);
 
   const riskSignals: string[] = [];
@@ -102,6 +105,34 @@ export default async function DealDetailPage({ params }: { params: Promise<{ id:
       <div className="mt-6">
         <WhatsappShare dealId={deal.id} dealName={deal.name} contactName={deal.primaryContact?.name} contactPhone={deal.primaryContact?.phone} nextStep={deal.nextStep} value={deal.value} currency={deal.currency} />
       </div>
+
+      <section className="rounded-xl border border-zinc-800 bg-zinc-900 p-4">
+        <div className="flex items-center justify-between">
+          <h2 className="font-medium">Stakeholders ({(stakeholders as unknown as unknown[]).length}) · MAP ({(mapItems as unknown as unknown[]).length})</h2>
+          <span className="text-xs text-zinc-500">{procurement ? `Procurement: ${(procurement as {status:string}).status}` : "Sem checklist"}</span>
+        </div>
+        <div className="mt-3 grid gap-3 md:grid-cols-2">
+          <div>
+            <h3 className="text-xs uppercase tracking-wide text-zinc-500">Stakeholders</h3>
+            {(stakeholders as unknown as Array<{id:string;name:string;role:string;influence:string;sentiment:string}>).length===0 && <p className="mt-2 text-sm text-zinc-500">Nenhum mapeado. Cadastre decisor/champion.</p>}
+            <div className="mt-2 space-y-1">
+              {(stakeholders as unknown as Array<{id:string;name:string;role:string;influence:string;sentiment:string}>).map(s=>(
+                <div key={s.id} className="flex justify-between rounded border border-zinc-800 bg-zinc-950 px-2 py-1.5 text-xs"><span className="text-zinc-100">{s.name} <span className="text-zinc-500">· {s.role}</span></span><span className="text-zinc-400">{s.influence}/{s.sentiment}</span></div>
+              ))}
+            </div>
+          </div>
+          <div>
+            <h3 className="text-xs uppercase tracking-wide text-zinc-500">MAP — Mutual Action Plan</h3>
+            {(mapItems as unknown as Array<{id:string;title:string;status:string;dueDate:string|null}>).length===0 && <p className="mt-2 text-sm text-zinc-500">Nenhum passo. Crie check-list de fechamento.</p>}
+            <div className="mt-2 space-y-1">
+              {(mapItems as unknown as Array<{id:string;title:string;status:string;dueDate:string|null}>).map(m=>(
+                <div key={m.id} className="flex justify-between rounded border border-zinc-800 bg-zinc-950 px-2 py-1.5 text-xs"><span className="text-zinc-200">{m.title}</span><Badge>{m.status}</Badge></div>
+              ))}
+            </div>
+          </div>
+        </div>
+        <p className="mt-3 text-xs text-zinc-500">API: <code>POST /api/deals/{deal.id}/stakeholders</code> · <code>POST /api/deals/{deal.id}/map</code> · procurement em <code>/api/deals/:id/procurement</code></p>
+      </section>
 
       <section className="mt-6 rounded-xl border border-zinc-800 bg-zinc-900 p-4">
         <div className="flex items-center justify-between">

@@ -21,7 +21,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const locale = (jar.get("locale")?.value as Locale|undefined) ?? defaultLocale;
   const tr=(k:string)=>t(locale,k);
   const members = role!=="MEMBER" ? await prisma.membership.findMany({ where:{ organizationId }, include:{ user:{ select:{ id:true, name:true } } } }) : [];
-  const [dealsTotal, companies, callsTotal, tasksTodo, tasksOverdue, pipeline, recentDeals, recentCalls, recentTasks, forecastDeals, staleDeals] = await Promise.all([
+  const [dealsTotal, companies, callsTotal, tasksTodo, tasksOverdue, pipeline, recentDeals, recentCalls, recentTasks, forecastDeals, staleDeals, ranking, wonLost, noNextStep, lostReasons, velocityRaw] = await Promise.all([
     prisma.deal.count({ where: whereOwner }),
     prisma.company.count({ where:{ organizationId } }),
     prisma.call.count({ where:{ organizationId } }),
@@ -33,6 +33,11 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     prisma.task.findMany({ where:{ organizationId, status:{ in:["TODO","IN_PROGRESS"] } }, orderBy:{ dueDate:"asc" }, take:5, select:{ id:true, title:true, status:true, dueDate:true } }),
     prisma.deal.findMany({ where:{ organizationId, ...(ownerId ? { ownerId } : {}), stage:{ notIn:["WON","LOST"] } } as never, select:{ value:true, probability:true } }),
     prisma.deal.findMany({ where:{ organizationId, ...(ownerId ? { ownerId } : {}), updatedAt:{ lt: new Date(Date.now()-7*86400000) }, stage:{ notIn:["WON","LOST"] } } as never, select:{ id:true, name:true, updatedAt:true }, take:5 }),
+    prisma.deal.groupBy({ by:["ownerId"], where:{ organizationId, stage:{ notIn:["LOST"] } } as never, _count:{ ownerId:true }, _sum:{ value:true } }),
+    prisma.deal.groupBy({ by:["stage"], where:{ organizationId, stage:{ in:["WON","LOST"] } } as never, _count:{ stage:true } }),
+    prisma.deal.findMany({ where:{ organizationId, stage:{ notIn:["WON","LOST"] }, OR:[{nextStep:null},{nextStepDate:null}] } as never, select:{ id:true, name:true, stage:true }, take:5 }),
+    prisma.deal.groupBy({ by:["lostReason"], where:{ organizationId, stage:"LOST", lostReason:{ not:null } } as never, _count:{ lostReason:true } }),
+    prisma.deal.findMany({ where: whereOwner, select:{ createdAt:true, updatedAt:true, stage:true } }),
   ]);
   const pipelineValue = pipeline.reduce((a,b)=>a+Number(b._sum.value??0),0);
   const forecast = forecastDeals.reduce((a,d)=>a+ Number((d as {value:unknown}).value??0)*( ((d as {probability:number|null}).probability??30)/100 ),0);
@@ -41,6 +46,13 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const period=new Date().toISOString().slice(0,7);
   const quotaNow = await prisma.quota.findFirst({ where:{ organizationId, period, ...(ownerId ? { userId: ownerId } : {}) } as never, select:{ target:true } }).catch(()=>null) as {target:unknown}|null;
   const quotaPct = quotaNow ? Math.round(forecast/Number(quotaNow.target as unknown as string)*100) : null;
+  const memberNameMap=new Map(members.map(m=>[m.userId, m.user.name]));
+  const rankingSorted=[...ranking].filter(r=>r.ownerId).sort((a,b)=>(b._count.ownerId??0)-(a._count.ownerId??0)).slice(0,5);
+  const wonCount=wonLost.find(w=>w.stage==="WON")?._count.stage ?? 0;
+  const lostCount=wonLost.find(w=>w.stage==="LOST")?._count.stage ?? 0;
+  const convRate = (wonCount+lostCount)>0 ? Math.round(wonCount/(wonCount+lostCount)*100) : null;
+  const velocityDays = velocityRaw.length ? Math.round(velocityRaw.reduce((a,d)=>a+(new Date(d.updatedAt).getTime()-new Date(d.createdAt).getTime())/86400000,0)/velocityRaw.length) : null;
+  const topLostReasons=[...lostReasons].sort((a,b)=>(b._count.lostReason??0)-(a._count.lostReason??0)).slice(0,3);
 
   return (
     <div className="p-6 sm:p-8 space-y-6">
@@ -106,19 +118,6 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
 
       <div className="grid gap-6 lg:grid-cols-2">
         <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-4">
-          <h2 className="font-medium">{tr("dashboard.recentCalls")}</h2>
-          <div className="mt-3 space-y-2">
-            {recentCalls.length===0 && <p className="text-sm text-zinc-500">{tr("dashboard.noCalls")} <Link href="/calls/new" className="text-sky-400 hover:underline">Nova call</Link></p>}
-            {recentCalls.map(c=>(
-              <Link key={c.id} href={`/calls/${c.id}`} className="flex items-center justify-between rounded-md border border-zinc-800 bg-zinc-950 px-3 py-2 hover:border-zinc-700">
-                <span className="text-sm text-zinc-100">{c.title}</span><span className="text-xs text-zinc-500">{c.status} · {new Date(c.createdAt).toLocaleDateString(locale)}</span>
-              </Link>
-            ))}
-          </div>
-          <div className="mt-3 flex gap-2"><Link href="/calls" className="text-xs text-sky-400 hover:underline">{tr("dashboard.viewCalls")}</Link><Link href="/live" className="text-xs text-sky-400 hover:underline">Live Coach →</Link></div>
-        </div>
-
-        <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-4">
           <h2 className="font-medium">{tr("dashboard.pendingTasks")}</h2>
           <div className="mt-3 space-y-2">
             {recentTasks.length===0 && <p className="text-sm text-zinc-500">{tr("dashboard.noTasks")}</p>}
@@ -129,6 +128,53 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
             ))}
           </div>
           <Link href="/tasks" className="mt-3 inline-block text-xs text-sky-400 hover:underline">{tr("dashboard.viewTasks")}</Link>
+        </div>
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-3">
+        <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-4">
+          <h2 className="font-medium">Ranking por closer</h2>
+          <p className="text-xs text-zinc-500">Deals ativos · top 5</p>
+          <div className="mt-3 space-y-2">
+            {rankingSorted.length===0 && <p className="text-sm text-zinc-500">Sem dados</p>}
+            {rankingSorted.map(r=>(
+              <div key={r.ownerId as string} className="flex items-center justify-between rounded-md border border-zinc-800 bg-zinc-950 px-3 py-2">
+                <span className="text-sm text-zinc-100">{memberNameMap.get(r.ownerId as string) ?? (r.ownerId as string).slice(0,8)}</span>
+                <span className="flex items-center gap-3 text-xs"><span className="text-zinc-400">{r._count.ownerId} deals</span><span className="font-medium text-zinc-200">{fmt(Number(r._sum.value ?? 0),"BRL",locale)}</span></span>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-4">
+          <h2 className="font-medium">Conversão & Velocity</h2>
+          <div className="mt-3 grid grid-cols-3 gap-3">
+            <div className="rounded-lg bg-zinc-950 p-3 text-center"><p className="text-xs text-zinc-500">WON</p><p className="text-lg font-semibold text-emerald-400">{wonCount}</p></div>
+            <div className="rounded-lg bg-zinc-950 p-3 text-center"><p className="text-xs text-zinc-500">LOST</p><p className="text-lg font-semibold text-red-400">{lostCount}</p></div>
+            <div className="rounded-lg bg-zinc-950 p-3 text-center"><p className="text-xs text-zinc-500">Conv.</p><p className="text-lg font-semibold">{convRate!==null?`${convRate}%`:"—"}</p></div>
+          </div>
+          <div className="mt-3 rounded-lg border border-zinc-800 bg-zinc-950 p-3">
+            <p className="text-xs text-zinc-500">Velocity médio (criação → último update)</p><p className="text-sm font-medium text-zinc-200">{velocityDays!==null?`${velocityDays} dias`:"—"}</p>
+          </div>
+          <div className="mt-3">
+            <p className="text-xs text-zinc-500">Top motivos de perda</p>
+            {topLostReasons.length===0 && <p className="text-xs text-zinc-600 mt-1">Sem dados</p>}
+            {topLostReasons.map(r=>(
+              <div key={r.lostReason as string} className="flex justify-between text-xs text-zinc-400 mt-1"><span className="truncate pr-2">{r.lostReason as string}</span><span>{r._count.lostReason}</span></div>
+            ))}
+          </div>
+        </div>
+        <div className="rounded-xl border border-amber-900/30 bg-amber-950/10 p-4">
+          <h2 className="font-medium text-amber-300">Sem próximo passo</h2>
+          <p className="text-xs text-zinc-500">Bloqueia avanço de estágio</p>
+          <div className="mt-3 space-y-2">
+            {noNextStep.length===0 && <p className="text-sm text-zinc-500">Tudo com próximo passo ✓</p>}
+            {noNextStep.map(d=>(
+              <Link key={d.id} href={`/deals/${d.id}`} className="flex items-center justify-between rounded-md border border-zinc-800 bg-zinc-950 px-3 py-2 hover:border-amber-800">
+                <span className="text-sm text-zinc-100 truncate pr-2">{d.name}</span><Badge>{d.stage}</Badge>
+              </Link>
+            ))}
+          </div>
+          {noNextStep.length>0 && <Link href="/pipeline" className="mt-3 inline-block text-xs text-sky-400 hover:underline">Cobrar no pipeline →</Link>}
         </div>
       </div>
     </div>
