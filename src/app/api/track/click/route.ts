@@ -3,9 +3,9 @@ import { prisma } from "@/lib/db";
 
 export async function GET(req: Request) {
   const url = new URL(req.url);
-  const dealId = url.searchParams.get("d");
-  const dest = url.searchParams.get("url") ?? url.searchParams.get("u");
-  const step = url.searchParams.get("s");
+  const dealId = url.searchParams.get("d") ?? url.searchParams.get("dealId");
+  const dest = url.searchParams.get("dest") ?? url.searchParams.get("url") ?? url.searchParams.get("u");
+  const step = url.searchParams.get("s") ?? url.searchParams.get("step");
   if (dealId) {
     try {
       const fu = await prisma.followUp.findFirst({ where: { dealId, content: { contains: `[tracking:${dealId}` } }, orderBy: { createdAt: "desc" } });

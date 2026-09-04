@@ -3,8 +3,8 @@ import { prisma } from "@/lib/db";
 
 export async function GET(req:Request){
   const url=new URL(req.url);
-  const dealId=url.searchParams.get("d");
-  const step=url.searchParams.get("s");
+  const dealId=url.searchParams.get("d") ?? url.searchParams.get("dealId");
+  const step=url.searchParams.get("s") ?? url.searchParams.get("step");
   // marca follow-up como aberto quando existir (best-effort)
   if(dealId){
     try{
