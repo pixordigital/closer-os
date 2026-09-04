@@ -52,6 +52,23 @@ export async function POST(req: Request) {
 
   // persist as delivery log for observability (no endpointId for inbound, use synthetic)
   // instead log to AuditLog + return 200; delivery table is for outbound only
+  const payload = parsed.data.payload as Record<string, unknown>;
+  // auto-sync for CRM events — company.created / deal.created with ownerId
+  try{
+    if(parsed.data.event.startsWith("company.") && payload.name){
+      const name=String(payload.name);
+      const exists=await prisma.company.findFirst({ where:{ organizationId, name } });
+      if(!exists) await prisma.company.create({ data:{ organizationId, name, website: payload.website as string|undefined, industry: payload.industry as string|undefined } as never });
+    }
+    if(parsed.data.event.startsWith("deal.") && payload.name && payload.companyName){
+      const comp=await prisma.company.findFirst({ where:{ organizationId, name: String(payload.companyName) } });
+      if(comp){
+        const dealName=String(payload.name);
+        const ex=await prisma.deal.findFirst({ where:{ organizationId, name: dealName, companyId: comp.id } });
+        if(!ex) await prisma.deal.create({ data:{ organizationId, companyId: comp.id, name: dealName, stage: (payload.stage as string) ?? "LEAD", value: payload.value as never, ownerId: payload.ownerId as string|undefined } as never });
+      }
+    }
+  }catch{}
   await auditLog({ organizationId, action:`webhook.inbound.${parsed.data.event}`, entityType:"Webhook", metadata: { event: parsed.data.event, payload: parsed.data.payload, idempotencyKey: idem } as never });
 
   // idempotency for inbound is tracked via audit log dedup above; no delivery row needed (FK guard)

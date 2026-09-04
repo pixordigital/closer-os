@@ -344,29 +344,32 @@ model Contact {
 }
 
 model Deal {
-  id                String    @id @default(cuid())
+  id                String            @id @default(cuid())
   organizationId    String
   companyId         String
   primaryContactId  String?
   name              String
-  stage             DealStage @default(LEAD)
-  value             Decimal?  @db.Decimal(14, 2)
-  currency          String    @default("BRL")
-  probability       Int? // 0-100
+  stage             DealStage         @default(LEAD)
+  forecastCategory  ForecastCategory? // PIPELINE | COMMIT | BEST_CASE | UPSIDE
+  value             Decimal?          @db.Decimal(14, 2)
+  currency          String            @default("BRL")
+  probability       Int?              // 0-100
   expectedCloseDate DateTime?
   source            String?
-  currentSolution   String?   @db.Text
-  desiredOutcome    String?   @db.Text
-  painSummary       String?   @db.Text
+  currentSolution   String?           @db.Text
+  desiredOutcome    String?           @db.Text
+  painSummary       String?           @db.Text
   urgency           String?
-  decisionProcess   String?   @db.Text
-  decisionCriteria  String?   @db.Text
-  nextStep          String?   @db.Text
+  decisionProcess   String?           @db.Text
+  decisionCriteria  String?           @db.Text
+  nextStep          String?           @db.Text
   nextStepDate      DateTime?
-  lostReason        String?   @db.Text
+  lostReason        String?           @db.Text
   ownerId           String?
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
+  commitDate        DateTime?
+  commitNote        String?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
 
   organization         Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   company              Company               @relation(fields: [companyId], references: [id], onDelete: Cascade)
@@ -1185,19 +1188,19 @@ model Certification {
 model AccountHealth {
   id                 String          @id @default(cuid())
   organizationId     String
-  companyId          String          @unique
-  overallScore       Int // 0-100
+  companyId          String
+  overallScore       Int             // 0-100
   tier               HealthScoreTier @default(HEALTHY)
-  adoptionScore      Int? // 0-100
-  engagementScore    Int? // 0-100
-  supportScore       Int? // 0-100
-  npsScore           Int? // -100 to 100
+  adoptionScore      Int?            // 0-100
+  engagementScore    Int?            // 0-100
+  supportScore       Int?            // 0-100
+  npsScore           Int?            // -100 to 100
   lastLoginDays      Int?
   lastTouchDays      Int?
   openTickets        Int?
-  churnRisk          Float? // 0-1
-  expansionPotential Float? // 0-1
-  signals            Json? // [{ type, value, date, source }]
+  churnRisk          Float?          // 0-1
+  expansionPotential Float?          // 0-1
+  signals            Json?           // [{ type, value, date, source }]
   calculatedAt       DateTime        @default(now())
   createdAt          DateTime        @default(now())
   updatedAt          DateTime        @updatedAt
@@ -1205,6 +1208,7 @@ model AccountHealth {
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   company      Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
+  @@unique([organizationId, companyId])
   @@index([organizationId])
 }
 

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { requireTenant } from "@/lib/tenant";
 import { z } from "zod";
 import { evolutionSendText } from "@/lib/whatsapp/evolution";
-import { checkLimits, randomDelay, typingDelay, humanize, logSent } from "@/lib/whatsapp/antiban";
+import { checkLimits, randomDelay, typingDelay, humanize, logSent, isBusinessHours, checkNumberCooldown, isOptedOut } from "@/lib/whatsapp/antiban";
 
 const schema=z.object({ instance:z.string().min(2), number:z.string().min(8), text:z.string().min(1).max(4000), dealId:z.string().cuid().optional().nullable() });
 
@@ -15,6 +15,15 @@ export async function POST(req:Request){
   const clean = number.replace(/\D/g,"");
   if(clean.length<10) return NextResponse.json({ error:"Número inválido — use 55DDDnumero" }, { status:400 });
 
+  if(await isOptedOut(organizationId, clean)) return NextResponse.json({ error:"Contato opt-out — não enviar" }, { status:403 });
+  const cd = await checkNumberCooldown(organizationId, clean);
+  if(!cd.ok) return NextResponse.json({ error: cd.reason, retryMs: (cd as {retryMs:number}).retryMs }, { status:429 });
+  if(!isBusinessHours()) {
+    // queue for next business hour instead of blocking
+    const { enqueueJob } = await import("@/lib/jobs");
+    await enqueueJob({ organizationId, type:"whatsapp_reminder_d1" as never, payload:{ organizationId, to: clean, text, instance, dealId } as never, runAt: new Date(Date.now()+3600000*2) } as never);
+    return NextResponse.json({ queued:true, reason:"Fora do horário comercial — agendado 2h" }, { status:202 });
+  }
   const lim = await checkLimits(organizationId, instance);
   if(!lim.ok) return NextResponse.json({ error: lim.reason, retryMs: (lim as {retryMs:number}).retryMs }, { status:429 });
 
