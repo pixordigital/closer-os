@@ -26,3 +26,33 @@ export async function evolutionLogout(instance:string){
   const r=await fetch(`${BASE}/instance/logout/${instance}`,{ method:"DELETE", headers:headers() });
   return r.json().catch(()=>({}));
 }
+export async function evolutionDelete(instance:string){
+  const r=await fetch(`${BASE}/instance/delete/${instance}`,{ method:"DELETE", headers:headers() });
+  const j=await r.json().catch(()=>({}));
+  if(!r.ok) throw new Error(`Evolution delete ${r.status}: ${JSON.stringify(j).slice(0,400)}`);
+  return j;
+}
+export async function evolutionRestart(instance:string){
+  const r=await fetch(`${BASE}/instance/restart/${instance}`,{ method:"PUT", headers:headers() });
+  const j=await r.json().catch(()=>({}));
+  if(!r.ok) throw new Error(`Evolution restart ${r.status}: ${JSON.stringify(j).slice(0,400)}`);
+  return j;
+}
+export async function evolutionSetWebhook(instance:string, url:string, events?:string[]){
+  const r=await fetch(`${BASE}/webhook/set/${instance}`,{ method:"POST", headers:headers(), body: JSON.stringify({ url, webhookByEvents: !!events, webhookBase64:false, events }) });
+  const j=await r.json().catch(()=>({}));
+  if(!r.ok) throw new Error(`Evolution webhook ${r.status}: ${JSON.stringify(j).slice(0,400)}`);
+  return j;
+}
+export async function evolutionUpdateSettings(instance:string, settings:Record<string,unknown>){
+  const r=await fetch(`${BASE}/settings/set/${instance}`,{ method:"POST", headers:headers(), body: JSON.stringify(settings) });
+  const j=await r.json().catch(()=>({}));
+  if(!r.ok) throw new Error(`Evolution settings ${r.status}: ${JSON.stringify(j).slice(0,400)}`);
+  return j;
+}
+export async function evolutionFetchInstances(){
+  const r=await fetch(`${BASE}/instance/fetchInstances`,{ headers:headers() });
+  const j=await r.json().catch(()=>[]);
+  if(!r.ok) throw new Error(`Evolution fetch ${r.status}`);
+  return j;
+}
