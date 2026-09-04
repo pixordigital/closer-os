@@ -10,6 +10,12 @@ export const metadata: Metadata = {
   manifest: "/manifest.json",
 };
 
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
+};
+
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const jar = await cookies();
   const locale = (jar.get("locale")?.value as Locale | undefined) ?? "pt-BR";

@@ -1,9 +1,6 @@
-import { getSession } from "@/lib/auth";
 import Link from "next/link";
 
 export default async function Home(){
-  const s=await getSession();
-  const logged=!!s;
   return (
     <div className="closer-home-v2">
       <style>{`
@@ -65,14 +62,39 @@ export default async function Home(){
         .cta .btn-primary{background:white;color:var(--accent)}
         footer{border-top:1px solid var(--border);padding:40px 24px}
         footer .inner{max-width:1280px;margin:0 auto;display:flex;justify-content:space-between;flex-wrap:wrap;gap:24px;color:var(--muted);font-size:13px}
-        @media(max-width:900px){.mock{grid-template-columns:1fr}.bento{grid-template-columns:1fr}.bento-card.large{grid-row:auto}.pricing{grid-template-columns:1fr}.price-card.popular{transform:none}nav .inner{gap:12px;flex-wrap:wrap;height:auto;min-height:64px;padding:12px 16px}nav .links{gap:16px;flex-wrap:wrap}nav .links a{font-size:13px}.hero{padding:40px 16px 24px}section{padding:40px 16px}}
+        .hero h1,.title,.mock,.bento,.pricing{max-width:100%}
+        @media(max-width:900px){
+          nav{overflow-x:auto}
+          nav .inner{flex-wrap:nowrap;gap:16px;height:64px;min-height:64px;padding:0 16px;overflow-x:auto;scrollbar-width:none}
+          nav .inner::-webkit-scrollbar{display:none}
+          nav .links{flex-shrink:0;gap:16px;flex-wrap:nowrap}
+          nav .links a{font-size:13px;white-space:nowrap}
+          .hero{padding:72px 24px 40px}
+          .hero-actions{display:flex;gap:12px;justify-content:center;flex-wrap:nowrap}
+          .hero-actions .btn-primary,.hero-actions .btn-ghost{padding:10px 22px;font-size:14px;white-space:nowrap;flex-shrink:0}
+          section{padding:72px 24px}
+          .mock{grid-template-columns:1.2fr 0.8fr;overflow-x:auto}
+          .bento{grid-template-columns:2fr 1fr 1fr;overflow-x:auto}
+          .bento-card.large{grid-row:span 2}
+          .pricing{grid-template-columns:repeat(3,1fr);overflow-x:auto}
+          .price-card.popular{transform:none}
+        }
+        @media(max-width:640px){
+          nav .inner{padding:0 12px}
+          .hero{padding:72px 24px 40px}
+          .hero-actions{display:flex;gap:12px;justify-content:center;flex-wrap:nowrap}
+          .hero-actions .btn-primary,.hero-actions .btn-ghost{padding:10px 22px;font-size:14px;white-space:nowrap;flex-shrink:0}
+          section{padding:72px 24px}
+          .mock,.bento,.pricing{grid-template-columns:1fr}
+          .bento-card.large{grid-row:auto}
+        }
       `}</style>
 
       <nav>
         <div className="inner">
           <Link href="/" className="logo"><div className="logo-mark"><span>C</span></div><span className="logo-text">CLOSER OS</span></Link>
           <div className="links"><a href="#novidades">Novidades</a><a href="#features">Recursos</a><a href="#pricing">Planos</a><a href="/today">App</a></div>
-          <div className="links">{logged ? <Link href="/today" className="btn-primary">Hoje →</Link> : <><Link href="/login" style={{color:"var(--muted)",textDecoration:"none",fontSize:"14px"}}>Entrar</Link><Link href="/register" className="btn-primary">Começar grátis</Link></>}</div>
+          <div className="links"><Link href="/login" style={{color:"var(--muted)",textDecoration:"none",fontSize:"14px"}}>Entrar</Link><Link href="/register" className="btn-primary">Começar grátis</Link></div>
         </div>
       </nav>
 
@@ -82,7 +104,7 @@ export default async function Home(){
           <h1>Vendas que <span>aprendem sozinhas</span></h1>
           <p>Closer OS agora é mobile-first, invisível e autônomo: capta Meet/Zoom sem bot visível, alimenta pipeline e follow-ups sozinho e só pede seu OK quando importa. LiteLLM integrado, sem deploy separado.</p>
           <div className="hero-actions">
-            {logged ? <Link href="/mobile-live" className="btn-primary">Abrir Mobile Live →</Link> : <Link href="/register" className="btn-primary">Criar conta grátis →</Link>}
+            <Link href="/register" className="btn-primary">Criar conta grátis →</Link>
             <a href="#novidades" className="btn-ghost">Ver novidades</a>
           </div>
           <p className="hero-note">PWA + APK real 4MB • iOS via TestFlight • Sem cartão</p>
@@ -164,7 +186,7 @@ export default async function Home(){
         <div className="inner">
           <h2>Pronto pra vender sem trocar de tela?</h2>
           <p>Instale a extensão, abra o Meet e deixe os agentes trabalharem. Você só aprova.</p>
-          <Link href={logged?"/mobile-live":"/register"} className="btn-primary" style={{background:"white",color:"var(--accent)"}}>{logged?"Abrir Mobile Live →":"Comece grátis →"}</Link>
+          <Link href="/register" className="btn-primary" style={{background:"white",color:"var(--accent)"}}>Comece grátis →</Link>
         </div>
       </section>
 
