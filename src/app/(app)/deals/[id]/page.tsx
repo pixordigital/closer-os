@@ -6,6 +6,7 @@ import { getDiscoveryWithHealth, healthColor, healthBarColor } from "@/lib/disco
 import { DiscoveryPanel } from "@/components/discovery/discovery-panel";
 import { PreCallPanel } from "@/components/ai/pre-call-panel";
 import { Attachments } from "@/components/deals/attachments";
+import { WhatsappShare } from "@/components/deals/whatsapp-share";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
@@ -96,6 +97,10 @@ export default async function DealDetailPage({ params }: { params: Promise<{ id:
 
       <div className="mt-6">
         <PreCallPanel dealId={deal.id} />
+      </div>
+
+      <div className="mt-6">
+        <WhatsappShare dealId={deal.id} dealName={deal.name} contactName={deal.primaryContact?.name} contactPhone={deal.primaryContact?.phone} nextStep={deal.nextStep} value={deal.value} currency={deal.currency} />
       </div>
 
       <section className="mt-6 rounded-xl border border-zinc-800 bg-zinc-900 p-4">
