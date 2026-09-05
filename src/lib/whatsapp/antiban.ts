@@ -42,7 +42,17 @@ export function humanize(text:string): string {
 }
 
 export async function checkLimits(organizationId:string, instance:string, now=Date.now()){
-  const conn = await prisma.integrationConnection.findFirst({ where:{ organizationId, provider: instance.startsWith("evolution")?"evolution":undefined, status:"connected" } }).catch(()=>null);
+  // ponytail: resolve instance by id OR config.instance, not provider prefix
+  let conn: { createdAt: Date } | null = null;
+  try {
+    const byId = await prisma.integrationConnection.findFirst({ where:{ organizationId, id: instance } });
+    if (byId) conn = byId as { createdAt: Date };
+    else {
+      const all = await prisma.integrationConnection.findMany({ where:{ organizationId, kind:"whatsapp", status:"connected" } });
+      const hit = all.find(c=> String((c.config as Record<string,unknown> | null)?.instance ?? c.id) === instance);
+      conn = (hit ?? all[0] ?? null) as { createdAt: Date } | null;
+    }
+  } catch { conn = null; }
   const createdAt = (conn?.createdAt as Date|undefined);
   const cfg = cfgFor(createdAt);
   const hourAgo = new Date(now - 3600000);
@@ -84,10 +94,9 @@ export async function isOptedOut(organizationId:string, to:string){
 export async function pickHealthyInstance(organizationId:string, preferred?:string): Promise<string|null>{
   const conns=await prisma.integrationConnection.findMany({ where:{ organizationId, kind:"whatsapp", status:"connected" } }).catch(()=>[]);
   if(conns.length===0) return preferred ?? null;
-  if(preferred && conns.some(c=>String((c.config as Record<string,unknown>)?.instance ?? c.provider)===preferred)) return preferred;
-  // pick least recently used
+  if(preferred && conns.some(c=> c.id===preferred || String((c.config as Record<string,unknown>)?.instance ?? "")===preferred)) return preferred;
   const scored=await Promise.all(conns.map(async c=>{
-    const inst=String((c.config as Record<string,unknown>)?.instance ?? c.provider ?? "evolution");
+    const inst=c.id;
     const cnt=await prisma.auditLog.count({ where:{ organizationId, action:"whatsapp.sent", entityId: inst, createdAt:{ gte: new Date(Date.now()-3600000) } } }).catch(()=>0);
     return { inst, cnt, conn:c };
   }));

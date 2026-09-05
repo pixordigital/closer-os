@@ -56,3 +56,18 @@ export async function evolutionFetchInstances(){
   if(!r.ok) throw new Error(`Evolution fetch ${r.status}`);
   return j;
 }
+export async function evolutionSendMedia(instance:string, number:string, mediatype:"image"|"video"|"audio"|"document", media:string, caption?:string){
+  const r=await fetch(`${BASE}/message/sendMedia/${instance}`,{ method:"POST", headers:headers(), body: JSON.stringify({ number, mediatype, media, caption, fileName: mediatype==="document" ? "document.pdf" : undefined }) });
+  const j=await r.json().catch(()=>({}));
+  if(!r.ok) throw new Error(`Evolution media ${r.status}: ${JSON.stringify(j).slice(0,400)}`);
+  return j;
+}
+export async function evolutionSendAudio(instance:string, number:string, audio:string){
+  return evolutionSendMedia(instance, number, "audio", audio);
+}
+export async function evolutionSendDocument(instance:string, number:string, media:string, fileName?:string, caption?:string){
+  const r=await fetch(`${BASE}/message/sendMedia/${instance}`,{ method:"POST", headers:headers(), body: JSON.stringify({ number, mediatype:"document", media, caption, fileName: fileName ?? "document.pdf" }) });
+  const j=await r.json().catch(()=>({}));
+  if(!r.ok) throw new Error(`Evolution document ${r.status}: ${JSON.stringify(j).slice(0,400)}`);
+  return j;
+}

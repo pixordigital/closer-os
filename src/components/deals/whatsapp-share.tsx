@@ -1,9 +1,9 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 
-const TEMPLATES = [
+const FALLBACK = [
   { label: "Follow-up D+1", text: "Oi {{nome}}, obrigado pelo papo hoje! Como combinado, segue próximo passo: {{nextStep}}. Quando falamos de novo?" },
   { label: "Lembrete call", text: "Oi {{nome}}, lembrando nossa call {{data}} às {{hora}}. Confirma? Qualquer coisa me chama aqui." },
   { label: "Proposta", text: "Oi {{nome}}, enviei a proposta de {{valor}}. Dá uma olhada e me diz o que achou — tiro qualquer dúvida por aqui." },
@@ -24,6 +24,20 @@ export function WhatsappShare({ dealId, dealName, contactName, contactPhone, nex
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  const [templates, setTemplates] = useState(FALLBACK);
+
+  useEffect(()=>{
+    fetch("/api/whatsapp/templates").then(r=>r.json()).then(j=>{
+      if(Array.isArray(j.templates) && j.templates.length){
+        setTemplates(j.templates.filter((t:Record<string,unknown>)=>t.isActive!==false).map((t:Record<string,unknown>)=>({ label: String(t.name), text: String(t.content) })));
+      }
+    }).catch(()=>{});
+    // auto instance: pick first connected
+    fetch("/api/whatsapp/instance").then(r=>r.json()).then(j=>{
+      const open = j.statuses?.find((s:Record<string,unknown>)=>String(s.status)==="open"||String(s.status)==="connected");
+      if(open?.id && !instance) setInstance(String(open.id));
+    }).catch(()=>{});
+  },[]);
 
   function pick(t: string) {
     const vars: Record<string, string> = {
@@ -40,29 +54,31 @@ export function WhatsappShare({ dealId, dealName, contactName, contactPhone, nex
     if (!text.trim()) { setMsg("Texto vazio"); return; }
     const clean = number.replace(/\D/g, "");
     if (clean.length < 10) { setMsg("Número inválido — use 55DDDnumero"); return; }
-    if (!instance.trim()) { setMsg("Informe a instância Evolution (ex: closer-xxxxxx) ou crie em /api/whatsapp/instance"); return; }
     setSending(true); setMsg(null);
+    const body:any = { number: clean, text: text.trim(), dealId };
+    if(instance.trim()) body.instance = instance.trim();
     const r = await fetch("/api/whatsapp/send", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ instance: instance.trim(), number: clean, text: text.trim(), dealId }),
+      body: JSON.stringify(body),
     });
     const j = await r.json().catch(() => ({}));
     setSending(false);
     if (!r.ok) { setMsg(j.error ?? "Falha"); return; }
-    setMsg(`Enviado ✓ delay ${j.antiban?.delay}ms typing ${j.antiban?.typing}ms`);
+    if(j.queued) setMsg(`Na fila ✓ ${j.reason ?? ""} retry ${Math.round((j.retryMs??0)/1000)}s`);
+    else setMsg(`Enviado ✓ delay ${j.antiban?.delay}ms typing ${j.antiban?.typing}ms`);
   }
 
   return (
     <section className="rounded-xl border border-zinc-800 bg-zinc-900 p-4">
       <h2 className="font-medium">WhatsApp — 1 clique</h2>
-      <p className="mt-1 text-xs text-zinc-500">Deal <span className="text-zinc-300">{dealName}</span>{contactName ? <> · {contactName}{contactPhone ? ` · ${contactPhone}` : ""}</> : " · sem contato"} · spintax {`{olá|oi|opa}`} + antiban + typing</p>
+      <p className="mt-1 text-xs text-zinc-500">Deal <span className="text-zinc-300">{dealName}</span>{contactName ? <> · {contactName}{contactPhone ? ` · ${contactPhone}` : ""}</> : " · sem contato"} · spintax {`{olá|oi|opa}`} + antiban + typing · <a href="/api/whatsapp/templates" className="text-zinc-400 hover:underline">templates DB</a></p>
       <div className="mt-3 flex flex-wrap gap-1.5">
-        {TEMPLATES.map((t) => (
+        {templates.map((t) => (
           <button key={t.label} onClick={() => pick(t.text)} className="rounded-full border border-zinc-700 bg-zinc-800 px-2.5 py-1 text-xs text-zinc-300 hover:bg-zinc-700">{t.label}</button>
         ))}
       </div>
       <div className="mt-3 grid gap-2 sm:grid-cols-2">
-        <input value={instance} onChange={(e) => setInstance(e.target.value)} placeholder="Instância Evolution (closer-xxxxxx)" className="h-9 rounded-md border border-zinc-800 bg-zinc-950 px-3 text-sm text-zinc-100 placeholder:text-zinc-500" />
+        <input value={instance} onChange={(e) => setInstance(e.target.value)} placeholder="Instância Evolution (auto se vazio)" className="h-9 rounded-md border border-zinc-800 bg-zinc-950 px-3 text-sm text-zinc-100 placeholder:text-zinc-500" />
         <input value={number} onChange={(e) => setNumber(e.target.value)} placeholder="Número 55DDDnumero" className="h-9 rounded-md border border-zinc-800 bg-zinc-950 px-3 text-sm text-zinc-100 placeholder:text-zinc-500" />
       </div>
       <Textarea value={text} onChange={(e) => setText(e.target.value)} rows={4} placeholder="Escolha um template acima ou digite..." className="mt-2" />
@@ -71,7 +87,7 @@ export function WhatsappShare({ dealId, dealName, contactName, contactPhone, nex
         {contactPhone && <a href={`https://wa.me/${contactPhone.replace(/\D/g, "")}?text=${encodeURIComponent(text || "Oi!")}`} target="_blank" rel="noreferrer" className="text-xs text-emerald-400 hover:underline">Abrir wa.me ↗</a>}
         {msg && <span className="text-xs text-zinc-400">{msg}</span>}
       </div>
-      <p className="mt-2 text-[11px] text-zinc-500">Sem número? Cadastre no contato. Sem instância? <code className="text-zinc-400">POST /api/whatsapp/instance</code> cria QR.</p>
+      <p className="mt-2 text-[11px] text-zinc-500">Instância vazia = auto (menos usada). Antibaan fila auto em limite/cooldown.</p>
     </section>
   );
 }

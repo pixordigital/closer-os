@@ -11,7 +11,8 @@ export type JobType =
   | "weekly_coaching_rollup"
   | "webhook_retry"
   | "daily_digest"
-  | "whatsapp_reminder_d1";
+  | "whatsapp_reminder_d1"
+  | "whatsapp_send";
 
 export async function enqueueJob(params: {
   organizationId?: string | null;
@@ -101,6 +102,39 @@ const handlers: Record<string, (payload: Record<string, unknown>) => Promise<unk
       }
     }
     return { updated, members: members.length };
+  },
+  whatsapp_send: async (p) => {
+    const orgId = p.organizationId as string | undefined;
+    const to = String(p.to ?? "").replace(/\D/g,"");
+    const instance = String(p.instance ?? `closer-${(orgId ?? "").slice(-6)}`);
+    const text = p.text as string | undefined;
+    const media = p.media as string | undefined;
+    const mediatype = p.mediatype as string | undefined;
+    const caption = p.caption as string | undefined;
+    const fileName = p.fileName as string | undefined;
+    if (!orgId || !to) throw new Error("organizationId/to required");
+    const { checkLimits, humanize, logSent, isOptedOut, checkNumberCooldown } = await import("./whatsapp/antiban");
+    if (await isOptedOut(orgId, to)) return { skipped:"optout", to };
+    const cd = await checkNumberCooldown(orgId, to, 120000);
+    if (!cd.ok) throw new Error(cd.reason);
+    const lim = await checkLimits(orgId, instance);
+    if (!lim.ok) throw new Error(lim.reason);
+    if (media) {
+      const { evolutionSendMedia, evolutionSendAudio, evolutionSendDocument } = await import("./whatsapp/evolution");
+      if (mediatype==="document" && fileName) await evolutionSendDocument(instance, to, media, fileName, caption ?? text);
+      else if (mediatype==="audio") await evolutionSendAudio(instance, to, media);
+      else await evolutionSendMedia(instance, to, (mediatype as "image"|"video"|"audio"|"document") ?? "image", media, caption ?? text);
+    } else {
+      const { evolutionSendText } = await import("./whatsapp/evolution");
+      const { randomDelay, typingDelay } = await import("./whatsapp/antiban");
+      const finalText = humanize(text ?? "");
+      const delay = randomDelay(lim.cfg!);
+      const typing = typingDelay(finalText, lim.cfg!);
+      await new Promise(r=>setTimeout(r, Math.min(1500, delay/2)));
+      await evolutionSendText(instance, to, finalText, { delayMs: delay + typing, presence:"composing" });
+    }
+    await logSent(orgId, instance, to);
+    return { sent:true, to, instance };
   },
   webhook_retry: async (p) => ({ note: "webhook retry future", deliveryId: p.deliveryId }),
   whatsapp_reminder_d1: async (p) => {

@@ -4,11 +4,47 @@
 # Sem domínio/TLS → APP_URL=http://178.105.181.38:6002
 version: "3.8"
 services:
+  evolution:
+    image: atendai/evolution-api:latest
+    restart: unless-stopped
+    environment:
+      SERVER_TYPE: http
+      SERVER_PORT: 8080
+      SERVER_URL: ${EVOLUTION_API_URL:-http://evolution:8080}
+      AUTHENTICATION_TYPE: apikey
+      AUTHENTICATION_API_KEY: ${EVOLUTION_API_KEY:-closer-evolution-key-change-me}
+      AUTHENTICATION_EXPOSE_IN_FETCH_INSTANCES: "true"
+      QRCODE_LIMIT: 30
+      QRCODE_COLOR: "#1988ff"
+      CACHE_REDIS_ENABLED: "false"
+      CACHE_LOCAL_ENABLED: "true"
+      SQS_ENABLED: "false"
+      WEBSOCKET_ENABLED: "false"
+      WEBHOOK_GLOBAL_ENABLED: "false"
+      DATABASE_ENABLED: "false"
+      LOG_LEVEL: ERROR,WARN,DEBUG,INFO,LOG,VERBOSE,DARK,WEBHOOKS
+      LOG_COLOR: "true"
+      LOG_BAILEYS: error
+    volumes:
+      - evolution_instances:/evolution/instances
+      - evolution_store:/evolution/store
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/ >/dev/null 2>&1 || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
   app:
     build:
       context: .
       dockerfile: Dockerfile
     restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      evolution:
+        condition: service_started
     environment:
       - NODE_ENV=production
       - PORT=3000
@@ -30,17 +66,29 @@ services:
       - STORAGE_SECRET_KEY=${STORAGE_SECRET_KEY}
       - STORAGE_REGION=${STORAGE_REGION}
       - REDIS_URL=${REDIS_URL}
+      - EVOLUTION_API_URL=http://evolution:8080
+      - EVOLUTION_API_KEY=${EVOLUTION_API_KEY:-closer-evolution-key-change-me}
+      - EVOLUTION_WEBHOOK_URL=${EVOLUTION_WEBHOOK_URL:-http://178.105.181.38:6002/api/whatsapp/webhook}
+      - CRON_SECRET=${CRON_SECRET:-}
     ports:
       - "6002:3000"
-    depends_on:
-      db:
-        condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/api/health || exit 1"]
       interval: 15s
       timeout: 5s
       retries: 3
       start_period: 25s
+
+  worker:
+    image: curlimages/curl:latest
+    restart: unless-stopped
+    depends_on:
+      app:
+        condition: service_healthy
+    entrypoint: ["/bin/sh","-c"]
+    command: 'echo "[worker] polling /api/jobs/run every 10s"; while true; do curl -sf -X POST http://app:3000/api/jobs/run -H "Content-Type: application/json" >/dev/null 2>&1 || true; sleep 10; done'
+    environment:
+      APP_URL: http://app:3000
 
   db:
     image: postgres:16-alpine
@@ -59,3 +107,5 @@ services:
 
 volumes:
   pgdata:
+  evolution_instances:
+  evolution_store:

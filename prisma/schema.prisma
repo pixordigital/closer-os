@@ -267,6 +267,7 @@ model Organization {
   certifications         Certification[]
   accountHealth          AccountHealth[]
   expansionPlaybooks     ExpansionPlaybook[]
+  whatsappTemplates      WhatsappTemplate[]
 
   @@index([slug])
 }
@@ -1159,4 +1160,20 @@ model ExpansionPlaybook {
 
   @@index([organizationId])
   @@index([trigger])
+}
+
+model WhatsappTemplate {
+  id             String   @id @default(cuid())
+  organizationId String
+  name           String
+  content        String   @db.Text
+  category       String?
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, name])
+  @@index([organizationId])
 }
