@@ -14,7 +14,7 @@ const NAV_KEYS = [
   { href: "/companies", key: "nav.companies", icon: Building2 },
   { href: "/contacts", key: "nav.contacts", icon: Users },
   { href: "/calls", key: "nav.calls", icon: Phone },
-  { href: "/live", key: "nav.live", icon: Radio, disabled: true },
+  { href: "/live", key: "nav.live", icon: Radio },
   { href: "/objections", key: "nav.objections", icon: ShieldAlert },
   { href: "/roleplay", key: "nav.roleplay", icon: Theater },
   { href: "/discovery", key: "nav.discovery", icon: Compass },
